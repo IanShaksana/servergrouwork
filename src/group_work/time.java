@@ -18,35 +18,18 @@ import java.util.logging.Logger;
  */
 public class time {
     public static void main(String[] args) {
-        try {
-            int result = (int) Math.pow(9, 3);
-            System.out.println(""+result);
-            String lol="berita1,kat1-berita2,kat2|sukses";
-            String lolol ="192.168.43.138";
-            String[] lol1 = lol.split("\\|");
-            String[] lol2 = lol1[0].split("-");
-            String[] lolol1 = lolol.split("\\.");
-            System.out.println(lolol1[2]);
-            System.out.println(lol2[1]);
-            DateFormat date = new SimpleDateFormat("dd-MM-yyyy");
-            Date tgl = new Date();
-            
-            Date test1 = date.parse("12-09-2995");
-            Date test2 = date.parse("12-09-1995");
-            System.out.println(""+date.format(tgl));
-            if (test1.compareTo(tgl)>0) {
-                System.out.println("after");
-            }else if (test1.compareTo(tgl)<0){
-                System.out.println("before");
-            }else if (test1.compareTo(tgl)==0){
-                System.out.println("same");
-            }
-            /*
-            long wasd = System.currentTimeMillis();
-            String lol = Long.toString(wasd);
-            System.out.println(lol);
-        */      } catch (ParseException ex) {
-            Logger.getLogger(time.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        int result = (int) (10*(Math.pow(2,1.5)));
+        System.out.println(""+result);
+        String lol="berita1,kat1-berita2,kat2|sukses";
+        String lolol ="192.168.43.138";
+        String[] lol1 = lol.split("\\|");
+        String[] lol2 = lol1[0].split("-");
+        String[] lolol1 = lolol.split("\\.");
+        System.out.println(lolol1[2]);
+        System.out.println(lol2[1]);
+        DateFormat date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date tgl = new Date();
+        String tanggal =date.format(tgl);
+        System.out.println(""+tanggal);
     }
 }
