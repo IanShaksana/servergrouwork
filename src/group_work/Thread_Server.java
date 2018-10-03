@@ -93,6 +93,7 @@ public class Thread_Server implements Runnable {
                     FuncHome(data);
                     break;
                 case "request_job_offer":
+                    //FuncJobOffer2(data);
                     FuncJobOffer(data);
                     break;
                 case "request_job_task":
@@ -100,6 +101,7 @@ public class Thread_Server implements Runnable {
                     break;
                 case "request_job_task2":
                     FuncJobTask2(data);
+                    //FuncJobTask22(data);
                     break;
                 case "request_job_task3":
                     FuncJobTask3(data);
@@ -109,6 +111,7 @@ public class Thread_Server implements Runnable {
                     break;
                 case "create_job":
                     FuncCreateJob(data, temporary);
+                    //FuncCreateJob2(data, temporary);
                     break;
                 case "request_myjob_worker":
                     FuncRequestWorkerJob(data);
@@ -133,6 +136,7 @@ public class Thread_Server implements Runnable {
                     break;
                 case "request_myjob_leader":
                     FuncRequestLeaderJob(data);
+                    //FuncRequestLeaderJob2(data);
                     break;
                 case "create_task":
                     FuncCreateTask(data, temporary);
@@ -153,9 +157,8 @@ public class Thread_Server implements Runnable {
                     System.out.println("This is image");
                     printStream.println("Success");
                     break;
-                case "ping":
-                    System.out.println("This is ping");
-                    printStream.println("Success");
+                case "request_user":
+                    FuncUser();
                     break;
                 case "get_message_in":
                     FuncGetMessage_in(data);
@@ -189,6 +192,10 @@ public class Thread_Server implements Runnable {
                     break;
                 case "cek_finished":
                     FuncFIN(data);
+                    //FuncFIN2(data);
+                    break;
+                case "postornot":
+                    FuncStartJob(data);
                     break;
                 default:
                     printStream.println("Unknown");
@@ -264,11 +271,61 @@ public class Thread_Server implements Runnable {
         }
     }
 
+    public void FuncFIN2(String[] data) {
+        String Condition = "";
+        try {
+            System.out.println("SELECT Status FROM job2 WHERE ID_Job ='" + data[1] + "'");
+            res = statement.executeQuery("SELECT Status FROM job2 WHERE ID_Job ='" + data[1] + "'");
+            res.next();
+            Condition = res.getString(1);
+            if (Condition.equals("finished")) {
+                printStream.println("finished");
+            } else {
+                printStream.println("not finished");
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
     //Halaman OFFER
     public void FuncJobOffer(String[] data) {
         try {
             System.out.println("This is request job offer");
             res = statement.executeQuery("SELECT Name,Description,Owner, ID_Job from job where Finished ='no'");
+            String append;
+            String appendix = "";
+            int i = 0;
+            while (res.next()) {
+                System.out.println("result : " + res.getString(1));
+                append = res.getString(1) + "," + res.getString(4);
+                if (i == 0) {
+                    appendix = append;
+                } else {
+                    appendix = appendix + "-" + append;
+                }
+                i++;
+
+            }
+
+            if (appendix.equals("")) {
+                printStream.println("failed no job");
+                statement.close();
+            } else {
+                System.out.println("Sending :" + appendix);
+                printStream.println(appendix);
+                statement.close();
+            }
+
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void FuncJobOffer2(String[] data) {
+        try {
+            System.out.println("This is request job offer");
+            res = statement.executeQuery("SELECT Name,Description,Owner, ID_Job from job2 where Status ='startH'");
             String append;
             String appendix = "";
             int i = 0;
@@ -353,6 +410,51 @@ public class Thread_Server implements Runnable {
             //cek if job still exist
             System.out.println("SELECT Name,Description,Type,Difficulty,ID_Job,Completed,ID_Task,ID_User,Due_Time FROM task WHERE ID_Job ='" + data[1] + "' AND ID_User IS NULL  AND Finished = 'no'");
             res = statement.executeQuery("SELECT Name,Description,Type,Difficulty,ID_Job,Completed,ID_Task,ID_User,Due_Time FROM task WHERE ID_Job ='" + data[1] + "' AND ID_User IS NULL  AND Finished = 'no'");
+            String list2 = "";
+
+            i = 0;
+            while (res.next()) {
+                System.out.println("result Name: " + res.getString(1));
+                System.out.println("result Desc: " + res.getString(2));
+                System.out.println("result Type: " + res.getString(3));
+                System.out.println("result Diff: " + res.getString(4));
+                System.out.println("result IDJO: " + res.getString(5));
+                System.out.println("result COMP: " + res.getString(6));
+                System.out.println("result IDTA: " + res.getString(7));
+                System.out.println("result WORK: " + res.getString(8));
+                System.out.println("result Time: " + res.getString(9));
+
+                if (i == 0) {
+                    list2 = list2;
+                } else {
+                    list2 = list2 + "-LIST-";
+                }
+                list2 = list2 + res.getString(1) + "-" + res.getString(2) + "-" + res.getString(3) + "-" + res.getString(4) + "-" + res.getString(5) + "-" + res.getString(6) + "-" + res.getString(7) + "-" + res.getString(8) + "-," + res.getString(9);
+                i++;
+
+            }
+            System.out.println("Sending :" + list2);
+            if (list2.equals("")) {
+                System.out.println("failed No Task");
+                printStream.println("failed No Task");
+            } else {
+                printStream.println(list2);
+            }
+            statement.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void FuncJobTask22(String[] data) {
+        try {
+            System.out.println("This is request job task for offer");
+            System.out.println("Enter Request :" + data[1]);
+            statement = localconnection_thread.createStatement();
+
+            //cek if job still exist
+            System.out.println("SELECT Name,Description,Type,Difficulty,ID_Job,ID_Task,ID_User FROM task2 WHERE ID_Job ='" + data[1] + "' AND ID_User IS NULL  AND Status = 'no'");
+            res = statement.executeQuery("SELECT Name,Description,Type,Difficulty,ID_Job,ID_Task,ID_User FROM task2 WHERE ID_Job ='" + data[1] + "' AND ID_User IS NULL  AND Status = 'no'");
             String list2 = "";
 
             i = 0;
@@ -490,6 +592,72 @@ public class Thread_Server implements Runnable {
             }
         } catch (ParseException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void FuncCreateJob2(String[] data, String temporary) {
+        try {
+            System.out.println("This is request create job and group");
+            //System.out.println(temporary);
+            //String[] date = temporary.split(",");
+            System.out.println("Job Name  : " + data[1]);
+            System.out.println("Job Desc  : " + data[2]);
+            System.out.println("Job Owner : " + data[3]);
+            System.out.println("Slot      : " + data[5]);
+            System.out.println("Due Date  : " + data[4]);
+            //System.out.println("Due Time  : " + date[2]);
+
+            Date SysDate = new Date();
+            String id_supplement = Long.toString(System.currentTimeMillis());
+            String ID_job = data[1] + "|" + id_supplement;
+            String tanggal = df2.format(SysDate);
+            System.out.println("INSERT INTO `group_work`.`job2` (`ID_Job`, `Name`, `Description`, `Owner`, `Day_R`,`Date_Created`,`Max_Worker`,`Current_Worker`,`UpVote`,`DownVote`,`Status`) "
+                    + "VALUES ("
+                    + "'" + ID_job + "', "
+                    + "'" + data[1] + "', "
+                    + "'" + data[2] + "', "
+                    + "'" + data[3] + "', "
+                    + "'" + data[4] + "', "
+                    + "'" + tanggal + "', "
+                    + "'" + data[5] + "',"
+                    + "'0','0','0', "
+                    + "'hiring')");
+            preparedStatement = localconnection_thread.prepareStatement("INSERT INTO `group_work`.`job2` (`ID_Job`, `Name`, `Description`, `Owner`, `Day_R`,`Date_Created`,`Max_Worker`,`Current_Worker`,`UpVote`,`DownVote`,`Status`) "
+                    + "VALUES ("
+                    + "'" + ID_job + "', "
+                    + "'" + data[1] + "', "
+                    + "'" + data[2] + "', "
+                    + "'" + data[3] + "', "
+                    + "'" + data[4] + "', "
+                    + "'" + tanggal + "', "
+                    + "'" + data[5] + "',"
+                    + "'0','0','0', "
+                    + "'hiring')");
+            try {
+                preparedStatement.executeUpdate();
+                System.out.println("Create job done");
+                statement.close();
+            } catch (Exception e) {
+                System.out.println("Create job failed");
+                printStream.println("Create job failed Due date cant be same or before");
+                statement.close();
+            }
+
+            System.out.println("INSERT INTO `group_work`.`grouping2` (`ID_User`, `ID_Job`, `Role`, `Finished`) VALUES ('" + data[3] + "','" + ID_job + "', 'Leader','no')");
+            preparedStatement = localconnection_thread.prepareStatement("INSERT INTO `group_work`.`grouping2` (`ID_User`, `ID_Job`, `Role`,`Finished`) VALUES ('" + data[3] + "','" + ID_job + "', 'Leader','no')");
+            try {
+                preparedStatement.executeUpdate();
+                System.out.println("Create group done");
+                printStream.println("succes");
+                statement.close();
+            } catch (Exception e) {
+                System.out.println("Create group failed");
+                printStream.println("Create group failed");
+                statement.close();
+            }
+
         } catch (SQLException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -898,6 +1066,62 @@ public class Thread_Server implements Runnable {
     //Previlege dari WORKER
 
     //Previlege dari LEADER
+    public void FuncStartJob(String[] data) {
+        try {
+            System.out.println("SELECT Status FROM job2 WHERE ID_Job ='" + data[1] + "'");
+            res = statement.executeQuery("SELECT Status FROM job2 WHERE ID_Job ='" + data[1] + "'");
+            res.next();
+            String Condition = res.getString(1);
+
+            switch (Condition) {
+                case "created":
+                    System.out.println("UPDATE `group_work`.`job2` SET `Status` = 'startH' WHERE `job2`.`ID_Job` = '" + data[1] + "'");
+                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job2` SET `Status` = 'startH' WHERE `job2`.`ID_Job` = '" + data[1] + "'");
+                    try {
+                        preparedStatement.executeUpdate();
+                        System.out.println("Success");
+                        printStream.println("Start Hiring");
+                        preparedStatement.close();
+                    } catch (Exception e) {
+                        System.out.println("Failed");
+                        printStream.println("failed");
+                        preparedStatement.close();
+                    }
+                    break;
+                case "startH":
+                    System.out.println("UPDATE `group_work`.`job2` SET `Status` = 'stopH' WHERE `job2`.`ID_Job` = '" + data[1] + "'");
+                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job2` SET `Status` = 'stopH' WHERE `job2`.`ID_Job` = '" + data[1] + "'");
+                    try {
+                        preparedStatement.executeUpdate();
+                        System.out.println("Success");
+                        printStream.println("Stop Hiring");
+                        preparedStatement.close();
+                    } catch (Exception e) {
+                        System.out.println("Failed");
+                        printStream.println("failed");
+                        preparedStatement.close();
+                    }
+                    break;
+                case "stopH":
+                    System.out.println("UPDATE `group_work`.`job2` SET `Status` = 'startH' WHERE `job2`.`ID_Job` = '" + data[1] + "'");
+                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job2` SET `Status` = 'startH' WHERE `job2`.`ID_Job` = '" + data[1] + "'");
+                    try {
+                        preparedStatement.executeUpdate();
+                        System.out.println("Success");
+                        printStream.println("Hiring");
+                        preparedStatement.close();
+                    } catch (Exception e) {
+                        System.out.println("Failed");
+                        printStream.println("failed");
+                        preparedStatement.close();
+                    }
+                    break;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
     public void FuncApproveYes(String[] data) {
         try {
             System.out.println("This is approve_yes " + data[2]);
@@ -941,7 +1165,35 @@ public class Thread_Server implements Runnable {
             i = 0;
             statement = localconnection_thread.createStatement();
             //res = statement.executeQuery("SELECT Name,ID_Job FROM job WHERE Owner='" + data[1] + "' AND Finished='no'");
-            res = statement.executeQuery("SELECT Name,ID_Job FROM job WHERE Owner='" + data[1] + "'");
+            res = statement.executeQuery("SELECT Name,ID_Job FROM job WHERE Owner='" + data[1] + "' AND Status != 'end'");
+            while (res.next()) {
+                if (i == 0) {
+                    joblist2 = res.getString(1) + "," + res.getString(2);
+                    i++;
+                } else {
+                    joblist2 = joblist2 + "-" + res.getString(1) + "," + res.getString(2);
+                }
+            }
+            if (joblist2.equals("")) {
+                printStream.println("failed no job");
+            } else {
+                System.out.println(joblist2);
+                printStream.println(joblist2);
+            }
+            statement.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void FuncRequestLeaderJob2(String[] data) {
+        try {
+            System.out.println("This is request myjob leader");
+            String joblist2 = "";
+            i = 0;
+            statement = localconnection_thread.createStatement();
+            //res = statement.executeQuery("SELECT Name,ID_Job FROM job WHERE Owner='" + data[1] + "' AND Finished='no'");
+            res = statement.executeQuery("SELECT Name,ID_Job FROM job2 WHERE Owner='" + data[1] + "' AND Status != 'end'");
             while (res.next()) {
                 if (i == 0) {
                     joblist2 = res.getString(1) + "," + res.getString(2);
@@ -1076,7 +1328,10 @@ public class Thread_Server implements Runnable {
     }
 
     public void FuncRemoveWorker(String[] data) {
+        int Qty_Cur_w = 0, Qty_Max_w = 0;
+        String ID_job = data[2];
         try {
+
             //grouping delete
             System.out.println("DELETE FROM `grouping` WHERE ID_User = '" + data[1] + "' AND ID_Job ='" + data[2] + "'");
             preparedStatement = localconnection_thread.prepareStatement("DELETE FROM `grouping` WHERE ID_User = '" + data[1] + "' AND ID_Job ='" + data[2] + "'");
@@ -1097,10 +1352,28 @@ public class Thread_Server implements Runnable {
             try {
                 preparedStatement.executeUpdate();
                 System.out.println("Success abandoning task");
+                //printStream.println("Success");
+                //preparedStatement.close();
+            } catch (Exception e) {
+                System.out.println("Failed abandon task");
+                //printStream.println("failed");
+                //preparedStatement.close();
+            }
+
+            System.out.println("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_job + "'");
+            res = statement.executeQuery("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_job + "'");
+            res.next();
+            Qty_Cur_w = Integer.parseInt(res.getString(1)) - 1;
+
+            System.out.println("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "'");
+            preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "'");
+            try {
+                preparedStatement.executeUpdate();
+                System.out.println("Success minus worker");
                 printStream.println("Success");
                 preparedStatement.close();
             } catch (Exception e) {
-                System.out.println("Failed abandon task");
+                System.out.println("Failed minus worker");
                 printStream.println("failed");
                 preparedStatement.close();
             }
@@ -1129,52 +1402,60 @@ public class Thread_Server implements Runnable {
             String[] task = new String[count_task_all];
             System.out.println("count task all : " + count_task_all);
 
-            //cek task finished but not yet approved
-            String need_approved;
-            System.out.println("SELECT ID_Task FROM task WHERE ID_Job ='" + ID_Job + "' AND Completed='yes' AND Approved ='no'");
-            res = statement.executeQuery("SELECT ID_Task FROM task WHERE ID_Job ='" + ID_Job + "' AND Completed='yes' AND Approved ='no'");
-            if (res.next()) {
-                need_approved = "yes";
-            } else {
-                need_approved = "none";
-            }
-            System.out.println("need approved = " + need_approved);
-            //cek task finished but not yet approved
-
-            //cek task, finished
-            int count_task_finished = 0;
-            System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_Job + "' AND Approved='yes'");
-            res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_Job + "' AND Approved='yes'");
-            if (res.next()) {
-                count_task_finished = res.getInt(1);
-            }
-            System.out.println("count task finished : " + count_task_finished);
-
-            //cek if task finished was greater than
-            int count_task_unfinished = 0;
-            if (need_approved.equals("none")) {
-                count_task_unfinished = count_task_all - count_task_finished;
-                System.out.println("count task unfinished = " + count_task_unfinished);
-                if (count_task_finished > count_task_unfinished) {
-                    System.out.println("finished greater than unfinished");
-                    FuncGetRewardJob(data);
+            if (count_task_all > 3) {
+                //cek task finished but not yet approved
+                String need_approved;
+                System.out.println("SELECT ID_Task FROM task WHERE ID_Job ='" + ID_Job + "' AND Completed='yes' AND Approved ='no'");
+                res = statement.executeQuery("SELECT ID_Task FROM task WHERE ID_Job ='" + ID_Job + "' AND Completed='yes' AND Approved ='no'");
+                if (res.next()) {
+                    need_approved = "yes";
                 } else {
-                    System.out.println("unfinished greater than finished");
-                    FuncGetUnsatisfactoryJob(data);
+                    need_approved = "none";
                 }
+                System.out.println("need approved = " + need_approved);
+                //cek task finished but not yet approved
+
+                //cek task, finished
+                int count_task_finished = 0;
+                System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_Job + "' AND Approved='yes'");
+                res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_Job + "' AND Approved='yes'");
+                if (res.next()) {
+                    count_task_finished = res.getInt(1);
+                }
+                System.out.println("count task finished : " + count_task_finished);
+
+                //cek if task finished was greater than
+                int count_task_unfinished = 0;
+                if (need_approved.equals("none")) {
+                    count_task_unfinished = count_task_all - count_task_finished;
+                    System.out.println("count task unfinished = " + count_task_unfinished);
+                    if (count_task_finished > count_task_unfinished) {
+                        System.out.println("finished greater than unfinished");
+                        FuncGetVote(data);
+                    } else {
+                        System.out.println("unfinished greater than finished");
+                        //FuncGetUnsatisfactoryJob(data);
+                    }
+                } else {
+                    System.out.println("task need approval");
+                    printStream.println("failed task need approval");
+                }
+                //cek if task finished was greater than
+
             } else {
-                System.out.println("task need approval");
-                printStream.println("failed task need approval");
+                System.out.println("failed task requirement must be 3");
+                printStream.println("failed task requirement must be 3");
+
+                //FuncGetUnsatisfactoryJob(data);
             }
 
-            //cek if task finished was greater than
         } catch (SQLException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }
 
-    public void FuncGetRewardJob(String[] data) {
+    public void FuncGetVote(String[] data) {
         try {
             //cara dapat member
             int count_member = 0;
@@ -1216,10 +1497,72 @@ public class Thread_Server implements Runnable {
         }
     }
 
-    public void FuncGetReward(String[] member) {
-        int ExpLvl, ExpPar;
-        String level, exp, leaderPoin, str, dex, intl, Nxt_Exp;
-        String getExp, getPar, Type, Difficulty, Time;
+    public void FuncCashIn(String[] data) {
+        try {
+            int count_member = 0;
+            String ID_Job = data[1];
+            int QtyDown = 0, QtyUp = 0, QtyCurW = 0, QtyVote = 0;
+            //cek if vote and down vote diplus sama dengan current worker
+            System.out.println("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_Job + "' ");
+            res = statement.executeQuery("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_Job + "'");
+            res.next();
+            QtyCurW = res.getInt(1);
+
+            System.out.println("SELECT UpVote FROM job WHERE ID_Job ='" + ID_Job + "' ");
+            res = statement.executeQuery("SELECT UpVote FROM job WHERE ID_Job ='" + ID_Job + "'");
+            res.next();
+            QtyUp = res.getInt(1);
+
+            System.out.println("SELECT DownVote FROM job WHERE ID_Job ='" + ID_Job + "' ");
+            res = statement.executeQuery("SELECT DownVote FROM job WHERE ID_Job ='" + ID_Job + "'");
+            res.next();
+            QtyDown = res.getInt(1);
+
+            QtyVote = QtyDown + QtyUp;
+            if (QtyVote == QtyCurW) {
+                //cara dapat member
+                System.out.println("SELECT count(ID_User) FROM grouping WHERE ID_Job ='" + ID_Job + "' AND Role ='Member' ");
+                res = statement.executeQuery("SELECT count(ID_User) FROM grouping WHERE ID_Job ='" + ID_Job + "' AND Role ='Member' ");
+                if (res.next()) {
+                    count_member = res.getInt(1);
+                }
+                System.out.println("Count Member : " + count_member);
+
+                String[] member = new String[count_member];
+                int i = 0;
+                System.out.println("SELECT ID_User FROM grouping WHERE ID_Job ='" + ID_Job + "' AND Role ='Member' ");
+                res = statement.executeQuery("SELECT ID_User FROM grouping WHERE ID_Job ='" + ID_Job + "' AND Role ='Member' ");
+                while (res.next()) {
+                    member[i] = res.getString(1);
+                    System.out.println("Member : " + i + ". " + member[i]);
+                    i++;
+                    System.out.println("i : " + i);
+                }
+                System.out.println("member length : " + member.length);
+                int leaderReward = FuncGetReward(member, ID_Job);
+                FuncGetLeaderReward(ID_Job, leaderReward);
+
+                //meng end kan
+                System.out.println("UPDATE `group_work`.`job` SET `Status` = 'end' where ID_Job = '" + ID_Job + "'");
+                preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job` SET `Status` = 'end' where ID_Job = '" + ID_Job + "'");
+                preparedStatement.executeUpdate();
+
+                printStream.println("sukses");
+
+            } else {
+                printStream.println("Failed Cash in , someone didnt vote");
+            }
+
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public int FuncGetReward(String[] member, String ID_Job) {
+        int forleader = 0;
+        String level, exp, str, dex, intl, Nxt_Exp;
+        String Type, Difficulty, Time;
         System.out.println(member.length);
         int count_member = 0;
         try {
@@ -1230,18 +1573,17 @@ public class Thread_Server implements Runnable {
                 res.next();
                 level = res.getString(1);
                 exp = res.getString(2);
-                leaderPoin = res.getString(3);
                 str = res.getString(3);
                 dex = res.getString(4);
                 intl = res.getString(5);
                 Nxt_Exp = res.getString(6);
-                int totalExp = 0, totalLP = 0, totalStr = Integer.parseInt(str), totalDex = Integer.parseInt(dex), totalIntl = Integer.parseInt(intl);
+                int totalExp = 0, totalStr = Integer.parseInt(str), totalDex = Integer.parseInt(dex), totalIntl = Integer.parseInt(intl);
                 //the user
 
                 //select all task approved
                 int count_task_personal = 0;
-                System.out.println("SELECT count(ID_Task) from task where ID_User = '" + member[count_member] + "' AND Approved = 'yes'");
-                res = statement.executeQuery("SELECT count(ID_Task) from task where ID_User = '" + member[count_member] + "' AND Approved = 'yes'");
+                System.out.println("SELECT count(ID_Task) from task where ID_User = '" + member[count_member] + "' AND Approved = 'yes' AND ID_Job ='" + ID_Job + "'");
+                res = statement.executeQuery("SELECT count(ID_Task) from task where ID_User = '" + member[count_member] + "' AND Approved = 'yes' AND ID_Job ='" + ID_Job + "'");
                 if (res.next()) {
                     count_task_personal = res.getInt(1);
                 }
@@ -1249,8 +1591,8 @@ public class Thread_Server implements Runnable {
 
                 String[] task = new String[count_task_personal];
                 int i = 0;
-                System.out.println("SELECT ID_Task FROM task where ID_User = '" + member[count_member] + "' AND Approved = 'yes' ");
-                res = statement.executeQuery("SELECT ID_Task FROM task where ID_User = '" + member[count_member] + "' AND Approved = 'yes' ");
+                System.out.println("SELECT ID_Task FROM task where ID_User = '" + member[count_member] + "' AND Approved = 'yes' AND ID_Job ='" + ID_Job + "'");
+                res = statement.executeQuery("SELECT ID_Task FROM task where ID_User = '" + member[count_member] + "' AND Approved = 'yes' AND ID_Job ='" + ID_Job + "'");
                 while (res.next()) {
                     task[i] = res.getString(1);
                     System.out.println("task[" + i + "] " + task[i]);
@@ -1308,45 +1650,180 @@ public class Thread_Server implements Runnable {
                         //FuncGetPunishment(data);
                     }
 
-                    System.out.println("UPDATE `group_work`.`task` SET `Finished` = 'yes' WHERE `task`.`ID_Task` = '" + task[count] + "';");
-                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`task` SET `Finished` = 'yes' WHERE `task`.`ID_Task` = '" + task[count] + "';");
-                    preparedStatement.executeUpdate();
-
+                    //System.out.println("UPDATE `group_work`.`task` SET `Finished` = 'yes' WHERE `task`.`ID_Task` = '" + task[count] + "';");
+                    //preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`task` SET `Finished` = 'yes' WHERE `task`.`ID_Task` = '" + task[count] + "';");
+                    //preparedStatement.executeUpdate();
                     //totalpoin
                     count++;
-                }/*
+                }
+                forleader = forleader + totalExp;
+                /*
                 System.out.println("UPDATE `group_work`.`user` SET `Experience` = '" + totalExp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
                 preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`user` SET `Experience` = '" + totalExp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
                 preparedStatement.executeUpdate();*/
                 //checking level
-                int Nxt_Lvl = Integer.parseInt(level);
-                int Nxt_exp = Integer.parseInt(Nxt_Exp);
-                System.out.println("Initial LVL: " + Nxt_Lvl);
-                System.out.println("Total EXP  : " + totalExp);
-                if (count_task_personal > 0) {
-                    while (totalExp >= Nxt_exp) {
-                        System.out.println("Level UP");
-                        System.out.println("Initial Total EXP : " + totalExp);
-                        System.out.println("Initial Next  EXP : " + Nxt_exp);
-                        Nxt_Lvl++;
-                        System.out.println("Level : " + Nxt_Lvl);
-                        totalExp = totalExp - Nxt_exp;
-                        Nxt_exp = (int) (10 * (Math.pow(Nxt_Lvl, 1.5)));
-                        System.out.println("Total EXP : " + totalExp);
-                        System.out.println("Next  EXP : " + Nxt_exp);
-                    }
-                    System.out.println("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
-                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
-                    preparedStatement.executeUpdate();
-                } else {
-                    System.out.println("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
-                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
-                    preparedStatement.executeUpdate();
-                }
-
+//                int Nxt_Lvl = Integer.parseInt(level);
+//                int Nxt_exp = Integer.parseInt(Nxt_Exp);
+//                System.out.println("Initial LVL: " + Nxt_Lvl);
+//                System.out.println("Total EXP  : " + totalExp);
+//                if (count_task_personal > 0) {
+//                    while (totalExp >= Nxt_exp) {
+//                        System.out.println("Level UP");
+//                        System.out.println("Initial Total EXP : " + totalExp);
+//                        System.out.println("Initial Next  EXP : " + Nxt_exp);
+//                        Nxt_Lvl++;
+//                        System.out.println("Level : " + Nxt_Lvl);
+//                        totalExp = totalExp - Nxt_exp;
+//                        Nxt_exp = (int) (10 * (Math.pow(Nxt_Lvl, 1.5)));
+//                        System.out.println("Total EXP : " + totalExp);
+//                        System.out.println("Next  EXP : " + Nxt_exp);
+//                    }
+//                    System.out.println("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
+//                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
+//                    preparedStatement.executeUpdate();
+//                } else {
+//                    System.out.println("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
+//                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
+//                    preparedStatement.executeUpdate();
+//                }
                 count_member++;
             }
-            printStream.println("sukses");
+            //total poin
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ParseException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return forleader;
+    }
+
+    public void FuncGetRewardSingle(String member, String ID_Job) {
+        //int forleader = 0;
+        String level, exp, str, dex, intl, Nxt_Exp;
+        String Type, Difficulty, Time;
+        //System.out.println(member.length);
+        //int count_member = 0;
+        try {
+
+            //the user
+            System.out.println("SELECT Level,Experience,Strength,Dexterity,Intelligence, Nxt_Experience FROM user WHERE ID_User ='" + member + "'");
+            res = statement.executeQuery("SELECT Level,Experience,Strength,Dexterity,Intelligence, Nxt_Experience FROM user WHERE ID_User ='" + member + "'");
+            res.next();
+            level = res.getString(1);
+            exp = res.getString(2);
+            str = res.getString(3);
+            dex = res.getString(4);
+            intl = res.getString(5);
+            Nxt_Exp = res.getString(6);
+            int totalExp = 0, totalStr = Integer.parseInt(str), totalDex = Integer.parseInt(dex), totalIntl = Integer.parseInt(intl);
+            //the user
+
+            //select all task approved
+            int count_task_personal = 0;
+            System.out.println("SELECT count(ID_Task) from task where ID_User = '" + member + "' AND Approved = 'yes' AND ID_Job ='" + ID_Job + "'");
+            res = statement.executeQuery("SELECT count(ID_Task) from task where ID_User = '" + member + "' AND Approved = 'yes' AND ID_Job ='" + ID_Job + "'");
+            if (res.next()) {
+                count_task_personal = res.getInt(1);
+            }
+            System.out.println("Count task personal finished : " + member + ", " + count_task_personal);
+
+            String[] task = new String[count_task_personal];
+            int i = 0;
+            System.out.println("SELECT ID_Task FROM task where ID_User = '" + member + "' AND Approved = 'yes' AND ID_Job ='" + ID_Job + "'");
+            res = statement.executeQuery("SELECT ID_Task FROM task where ID_User = '" + member + "' AND Approved = 'yes' AND ID_Job ='" + ID_Job + "'");
+            while (res.next()) {
+                task[i] = res.getString(1);
+                System.out.println("task[" + i + "] " + task[i]);
+                i++;
+            }
+            System.out.println("--------------------------------------------");
+
+            int count = 0;
+
+            while (count < count_task_personal) {
+                //the task
+                res = statement.executeQuery("SELECT Type, Difficulty, Due_Time from task where ID_Task = '" + task[count] + "'");
+                res.next();
+                Type = res.getString(1);
+                Difficulty = res.getString(2);
+                Time = res.getString(3);
+                //the task
+
+                //cek tanggal
+                //tambahi date completion
+                String condition = "";
+                DateFormat date1 = new SimpleDateFormat("dd-MM-yyyy");
+                DateFormat date2 = new SimpleDateFormat("yyyy-MM-dd");
+                Date tgl = new Date();
+                Date test1 = date2.parse(Time);
+                System.out.println("System date: " + date2.format(tgl));
+                System.out.println("Due date : " + date2.format(test1));
+                if (test1.compareTo(tgl) < 0) {
+                    System.out.println("late (after)");
+                    condition = "late";
+                } else if (test1.compareTo(tgl) > 0) {
+                    System.out.println("before");
+                    condition = "clear";
+                } else if (test1.compareTo(tgl) == 0) {
+                    System.out.println("same");
+                    condition = "clear";
+                }
+                //cek tanggal
+
+                //total poin 1 task
+                if (condition.equals("clear")) {
+                    switch (Type) {
+                        case "Str":
+                            totalStr = totalStr + Integer.parseInt(Difficulty);
+                            break;
+                        case "Dex":
+                            totalDex = totalDex + Integer.parseInt(Difficulty);
+                            break;
+                        case "Int":
+                            totalIntl = totalIntl + Integer.parseInt(Difficulty);
+                            break;
+                    }
+                    totalExp = totalExp + Integer.parseInt(exp) + (2 * (50 + (int) Math.sqrt(Math.pow(20, Integer.parseInt(Difficulty)))));
+                } else {
+                    //FuncGetPunishment(data);
+                }
+
+                System.out.println("UPDATE `group_work`.`task` SET `Finished` = 'yes' WHERE `task`.`ID_Task` = '" + task[count] + "';");
+                preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`task` SET `Finished` = 'yes' WHERE `task`.`ID_Task` = '" + task[count] + "';");
+                preparedStatement.executeUpdate();
+
+                //totalpoin
+                count++;
+            }
+            /*
+                System.out.println("UPDATE `group_work`.`user` SET `Experience` = '" + totalExp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
+                preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`user` SET `Experience` = '" + totalExp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member[count_member] + "';");
+                preparedStatement.executeUpdate();*/
+            //checking level
+            int Nxt_Lvl = Integer.parseInt(level);
+            int Nxt_exp = Integer.parseInt(Nxt_Exp);
+            System.out.println("Initial LVL: " + Nxt_Lvl);
+            System.out.println("Total EXP  : " + totalExp);
+            if (count_task_personal > 0) {
+                while (totalExp >= Nxt_exp) {
+                    System.out.println("Level UP");
+                    System.out.println("Initial Total EXP : " + totalExp);
+                    System.out.println("Initial Next  EXP : " + Nxt_exp);
+                    Nxt_Lvl++;
+                    System.out.println("Level : " + Nxt_Lvl);
+                    totalExp = totalExp - Nxt_exp;
+                    Nxt_exp = (int) (10 * (Math.pow(Nxt_Lvl, 1.5)));
+                    System.out.println("Total EXP : " + totalExp);
+                    System.out.println("Next  EXP : " + Nxt_exp);
+                }
+                System.out.println("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member + "';");
+                preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member + "';");
+                preparedStatement.executeUpdate();
+            } else {
+                System.out.println("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member + "';");
+                preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`user` SET `Level` = '" + Nxt_Lvl + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_exp + "', `Strength` = '" + totalStr + "', `Dexterity` = '" + totalDex + "', `Intelligence` = '" + totalIntl + "' WHERE `user`.`ID_User` = '" + member + "';");
+                preparedStatement.executeUpdate();
+            }
 
             //total poin
         } catch (SQLException ex) {
@@ -1354,65 +1831,65 @@ public class Thread_Server implements Runnable {
         } catch (ParseException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
+        //return forleader;
     }
 
-    public void FuncCashIn(String[] data) {
+    public void FuncGetLeaderReward(String ID_Job, int leaderReward) {
         try {
-            int count_member = 0;
-            String ID_Job = data[1];
-            int QtyDown = 0, QtyUp = 0, QtyCurW = 0, QtyVote = 0;
-            //cek if vote and down vote diplus sama dengan current worker
-            System.out.println("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_Job + "' ");
-            res = statement.executeQuery("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_Job + "'");
+            int level, exp, Nxt_Exp;
+            String owner;
+            System.out.println("SELECT Owner FROM job WHERE ID_Job ='" + ID_Job + "'");
+            res = statement.executeQuery("SELECT Owner FROM job WHERE ID_Job ='" + ID_Job + "'");
             res.next();
-            QtyCurW = res.getInt(1);
+            owner = res.getString(1);
 
-            System.out.println("SELECT UpVote FROM job WHERE ID_Job ='" + ID_Job + "' ");
-            res = statement.executeQuery("SELECT UpVote FROM job WHERE ID_Job ='" + ID_Job + "'");
+            System.out.println("SELECT Level,Experience, Nxt_Experience FROM user WHERE ID_User ='" + owner + "'");
+            res = statement.executeQuery("SELECT Level,Experience, Nxt_Experience FROM user WHERE ID_User ='" + owner + "'");
             res.next();
-            QtyUp = res.getInt(1);
+            level = res.getInt(1);
+            exp = res.getInt(2);
+            Nxt_Exp = res.getInt(3);
 
-            System.out.println("SELECT DownVote FROM job WHERE ID_Job ='" + ID_Job + "' ");
-            res = statement.executeQuery("SELECT DownVote FROM job WHERE ID_Job ='" + ID_Job + "'");
-            res.next();
-            QtyDown = res.getInt(1);
-
-            QtyVote = QtyDown + QtyUp;
-            if (QtyVote == QtyCurW) {
-                //cara dapat member
-                System.out.println("SELECT count(ID_User) FROM grouping WHERE ID_Job ='" + ID_Job + "' AND Role ='Member' ");
-                res = statement.executeQuery("SELECT count(ID_User) FROM grouping WHERE ID_Job ='" + ID_Job + "' AND Role ='Member' ");
-                if (res.next()) {
-                    count_member = res.getInt(1);
-                }
-                System.out.println("Count Member : " + count_member);
-
-                String[] member = new String[count_member];
-                int i = 0;
-                System.out.println("SELECT ID_User FROM grouping WHERE ID_Job ='" + ID_Job + "' AND Role ='Member' ");
-                res = statement.executeQuery("SELECT ID_User FROM grouping WHERE ID_Job ='" + ID_Job + "' AND Role ='Member' ");
-                while (res.next()) {
-                    member[i] = res.getString(1);
-                    System.out.println("Member : " + i + ". " + member[i]);
-                    i++;
-                    System.out.println("i : " + i);
-                }
-                System.out.println("member length : " + member.length);
-                FuncGetReward(member);
-                
-                //meng end kan
-                System.out.println("UPDATE `group_work`.`job` SET `Status` = 'end' where ID_Job = '"+ID_Job+"'");
-                preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job` SET `Status` = 'end' where ID_Job = '"+ID_Job+"'");
-                preparedStatement.executeUpdate();
-
-            } else {
-                printStream.println("Failed Cash in , someone didnt vote");
+            int count_task_all = 0;
+            System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_Job + "' ");
+            res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_Job + "' ");
+            if (res.next()) {
+                count_task_all = res.getInt(1);
             }
+            System.out.println("count task finished : " + count_task_all);
+
+            int count_task_finished = 0;
+            System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_Job + "' AND Approved='yes'");
+            res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_Job + "' AND Approved='yes'");
+            if (res.next()) {
+                count_task_finished = res.getInt(1);
+            }
+            System.out.println("count task finished : " + count_task_finished);
+            //int reward_leader = (int) ( count_task_all* 100 * count_task_finished / (Math.pow(count_task_all, 0.5)));
+            int totalExp = (int) (exp + (0.75 * leaderReward));
+
+            //int Nxt_exp = Integer.parseInt(Nxt_Exp);
+            System.out.println("Initial LVL: " + level);
+            System.out.println("Total EXP  : " + totalExp);
+
+            while (totalExp >= Nxt_Exp) {
+                System.out.println("Initial Total EXP : " + totalExp);
+                System.out.println("Initial Next  EXP : " + Nxt_Exp);
+                level++;
+                System.out.println("Level UP");
+                System.out.println("Level : " + level);
+                totalExp = totalExp - Nxt_Exp;
+                Nxt_Exp = (int) (10 * (Math.pow(level, 1.5)));
+                System.out.println("Total EXP : " + totalExp);
+                System.out.println("Next  EXP : " + Nxt_Exp);
+            }
+            System.out.println("UPDATE `group_work`.`user` SET `Level` = '" + level + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_Exp + "' WHERE `user`.`ID_User` = '" + owner + "';");
+            preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`user` SET `Level` = '" + level + "', `Experience` = '" + totalExp + "', `Nxt_Experience` = '" + Nxt_Exp + "' WHERE `user`.`ID_User` = '" + owner + "';");
+            preparedStatement.executeUpdate();
 
         } catch (SQLException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
-
     }
 
     //not done yet
@@ -1441,6 +1918,38 @@ public class Thread_Server implements Runnable {
 
     public void FuncGetPunishment(String[] data) {
 
+    }
+
+    public void FuncUser() {
+        try {
+            res = statement.executeQuery("SELECT ID_User from user");
+            String append;
+            String appendix = "";
+            int i = 0;
+            while (res.next()) {
+                System.out.println("result : " + res.getString(1));
+                append = res.getString(1);
+                if (i == 0) {
+                    appendix = append;
+                } else {
+                    appendix = appendix + "-" + append;
+                }
+                i++;
+
+            }
+
+            if (appendix.equals("")) {
+                printStream.println("failed no job");
+                statement.close();
+            } else {
+                System.out.println("Sending :" + appendix);
+                printStream.println(appendix);
+                statement.close();
+            }
+
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     //not done yet
 
@@ -1548,7 +2057,7 @@ public class Thread_Server implements Runnable {
                     res.next();
                     Qty_Max_w = Integer.parseInt(res.getString(1));
 
-                    if (Qty_Cur_w < Qty_Max_w) {
+                    if (Qty_Cur_w <= Qty_Max_w) {
                         //cek if already request
                         request = data[1] + "-apply-" + data[2];
                         res = statement.executeQuery("SELECT message FROM message WHERE message ='" + request + "' and confirmation ='send'");
@@ -1584,7 +2093,7 @@ public class Thread_Server implements Runnable {
                         }
                     } else {
                         System.out.println("WORKER FULL");
-                        printStream.println("Failed Worker FULL");
+                        printStream.println("failed Worker FULL");
                     }
 
                 } catch (SQLException ex) {
@@ -1826,20 +2335,19 @@ public class Thread_Server implements Runnable {
                         System.out.println("SELECT ID_User, ID_Job, Role FROM grouping WHERE ID_User ='" + data[3] + "' AND ID_Job ='" + ID_job + "' AND Role='Member'");
                         res = statement.executeQuery("SELECT ID_User, ID_Job, Role FROM grouping WHERE ID_User ='" + data[3] + "' AND ID_Job ='" + ID_job + "' AND Role='Member'");
                         if (res.next()) {
-                            preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "';");
-                            System.out.println("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "';");
+                            //preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "';");
+                            //System.out.println("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "';");
 
-                            try {
-                                preparedStatement.executeUpdate();
-                                System.out.println("success adding job");
-                                printStream.println("success");
-                                preparedStatement.close();
-                            } catch (Exception e) {
-                                System.out.println("failed adding job");
-                                printStream.println("failed");
-                                preparedStatement.close();
-                            }
-
+//                            try {
+//                                preparedStatement.executeUpdate();
+//                                System.out.println("success adding job");
+//                                printStream.println("success");
+//                                preparedStatement.close();
+//                            } catch (Exception e) {
+//                                System.out.println("failed adding job");
+//                                printStream.println("failed");
+//                                preparedStatement.close();
+//                            }
                             System.out.println("Already joined job");
                             printStream.println("success");
                         } else {
@@ -2068,19 +2576,19 @@ public class Thread_Server implements Runnable {
                         System.out.println("SELECT ID_User, ID_Job, Role FROM grouping WHERE ID_User ='" + data[3] + "' AND ID_Job ='" + ID_job + "' AND Role='Member'");
                         res = statement.executeQuery("SELECT ID_User, ID_Job, Role FROM grouping WHERE ID_User ='" + data[3] + "' AND ID_Job ='" + ID_job + "' AND Role='Member'");
                         if (res.next()) {
-                            preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "';");
-                            System.out.println("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "';");
+                            //preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "';");
+                            //System.out.println("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "';");
 
-                            try {
-                                preparedStatement.executeUpdate();
-                                System.out.println("success adding job");
-                                //printStream.println("success");
-                                //preparedStatement.close();
-                            } catch (Exception e) {
-                                System.out.println("failed adding job");
-                                //printStream.println("failed");
-                                //preparedStatement.close();
-                            }
+//                            try {
+//                                preparedStatement.executeUpdate();
+//                                System.out.println("success adding job");
+//                                //printStream.println("success");
+//                                //preparedStatement.close();
+//                            } catch (Exception e) {
+//                                System.out.println("failed adding job");
+//                                //printStream.println("failed");
+//                                //preparedStatement.close();
+//                            }
                             System.out.println("Already joined job");
                             printStream.println("success");
                             preparedStatement.close();
@@ -2170,6 +2678,9 @@ public class Thread_Server implements Runnable {
                     preparedStatement = localconnection_thread.prepareStatement("Delete From `group_work`.`message` where message='" + message + "'");
                     preparedStatement.executeUpdate();
 
+                    //get reward
+                    FuncGetRewardSingle(data[3], ID_job);
+
                     printStream.println("sukses");
                 } catch (SQLException ex) {
                     Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
@@ -2204,6 +2715,9 @@ public class Thread_Server implements Runnable {
                     System.out.println("Delete From `group_work`.`message` where message='" + message + "'");
                     preparedStatement = localconnection_thread.prepareStatement("Delete From `group_work`.`message` where message='" + message + "'");
                     preparedStatement.executeUpdate();
+
+                    //get reward
+                    FuncGetRewardSingle(data[3], ID_job);
 
                     printStream.println("sukses");
                 } catch (SQLException ex) {

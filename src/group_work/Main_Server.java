@@ -30,7 +30,7 @@ public class Main_Server {
             Class.forName("com.mysql.jdbc.Driver");
             Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/group_work", "root", "lunabeam");
             System.out.println("SQL Connected");
-            DB_MANAGEMENT newManagement = new DB_MANAGEMENT(connection);
+            //DB_MANAGEMENT newManagement = new DB_MANAGEMENT(connection);
             //newManagement.run();
 
                         
