@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package group_work;
 
 import java.io.BufferedReader;
@@ -31,10 +26,6 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- *
- * @author Adrian
- */
 public class Thread_Server implements Runnable {
 
     File fileloc;
@@ -56,7 +47,6 @@ public class Thread_Server implements Runnable {
 
     public Thread_Server(Socket socket, Connection connection) {
         try {
-            //fileloc = new File("D:\\GroupWork");
             localsocket_thread = socket;
             localconnection_thread = connection;
             bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -64,10 +54,7 @@ public class Thread_Server implements Runnable {
             dataInputStream = new DataInputStream(socket.getInputStream());
             df = new SimpleDateFormat("yyyy-MM-dd");
             df2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            //fileOutputStream  = new FileOutputStream(fileloc);
             statement = localconnection_thread.createStatement();
-
-            //sendData = new PrintStream(socket.getOutputStream());
             i = 0;
         } catch (IOException | SQLException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
@@ -110,8 +97,9 @@ public class Thread_Server implements Runnable {
                     FuncOldApply(data);
                     break;
                 case "create_job":
-                    FuncCreateJob(data, temporary);
+                    //FuncCreateJob(data, temporary);
                     //FuncCreateJob2(data, temporary);
+                    FuncCreateJob3(data, temporary);
                     break;
                 case "request_myjob_worker":
                     FuncRequestWorkerJob(data);
@@ -139,7 +127,8 @@ public class Thread_Server implements Runnable {
                     //FuncRequestLeaderJob2(data);
                     break;
                 case "create_task":
-                    FuncCreateTask(data, temporary);
+                    //FuncCreateTask(data, temporary);
+                    FuncCreateTask2(data, temporary);
                     break;
                 case "request_worker":
                     FuncViewWorker(data);
@@ -658,6 +647,67 @@ public class Thread_Server implements Runnable {
                 statement.close();
             }
 
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void FuncCreateJob3(String[] data, String temporary) {
+        try {
+            System.out.println("This is request create job and group");
+            System.out.println(temporary);
+            String[] date = temporary.split(",");
+            System.out.println("Job Name  : " + data[1]);
+            System.out.println("Job Desc  : " + data[2]);
+            System.out.println("Job Owner : " + data[3]);
+            System.out.println("Max : " + data[4]);
+            System.out.println("Due Date  : " + date[1]);
+            System.out.println("Due Time  : " + date[2]);
+
+            Date SysDate = new Date();
+            Date jobdate = df.parse(date[1]);
+            if (jobdate.compareTo(SysDate) > 0) {
+                System.out.println("after");
+                String id_supplement = Long.toString(System.currentTimeMillis());
+                String ID_job = data[1] + "|" + id_supplement;
+                String tanggal = df2.format(SysDate);
+                System.out.println("INSERT INTO `group_work`.`job` (`ID_Job`, `Name`, `Description`, `Owner`, `Due_Time`,`Finished`,`Date_Created`,`Max_Worker`,`Current_Worker`,`UpVote`,`DownVote`,`Status`) VALUES ('" + ID_job + "', '" + data[1] + "', '" + data[2] + "', '" + data[3] + "', '" + date[1] + " " + date[2] + "','no','" + tanggal + "', '"+data[4]+"','0','0','0', 'hiring')");
+                preparedStatement = localconnection_thread.prepareStatement("INSERT INTO `group_work`.`job` (`ID_Job`, `Name`, `Description`, `Owner`, `Due_Time`,`Finished`,`Date_Created`,`Max_Worker`,`Current_Worker`,`UpVote`,`DownVote`,`Status`) VALUES ('" + ID_job + "', '" + data[1] + "', '" + data[2] + "', '" + data[3] + "', '" + date[1] + " " + date[2] + "','no','" + tanggal + "', '"+data[4]+"','0','0','0', 'hiring')");
+                try {
+                    preparedStatement.executeUpdate();
+                    System.out.println("Create job done");
+                    statement.close();
+                } catch (Exception e) {
+                    System.out.println("Create job failed");
+                    printStream.println("Create job failed Due date cant be same or before");
+                    statement.close();
+                }
+
+                System.out.println("INSERT INTO `group_work`.`grouping` (`ID_User`, `ID_Job`, `Role`, `Finished`) VALUES ('" + data[3] + "','" + ID_job + "', 'Leader','no')");
+                preparedStatement = localconnection_thread.prepareStatement("INSERT INTO `group_work`.`grouping` (`ID_User`, `ID_Job`, `Role`,`Finished`) VALUES ('" + data[3] + "','" + ID_job + "', 'Leader','no')");
+                try {
+                    preparedStatement.executeUpdate();
+                    System.out.println("Create group done");
+                    printStream.println(ID_job);
+                    statement.close();
+                } catch (Exception e) {
+                    System.out.println("Create group failed");
+                    printStream.println("Create group failed");
+                    statement.close();
+                }
+            } else if (jobdate.compareTo(SysDate) < 0) {
+                System.out.println("before");
+                System.out.println("Create job failed Due date cant be same or before");
+                printStream.println("Create job failed Due date cant be same or before");
+                statement.close();
+            } else if (jobdate.compareTo(SysDate) == 0) {
+                System.out.println("same");
+                System.out.println("Create job failed Due date cant be same or before");
+                printStream.println("Create job failed Due date cant be same or before");
+                statement.close();
+            }
+        } catch (ParseException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         } catch (SQLException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -1252,6 +1302,80 @@ public class Thread_Server implements Runnable {
                         preparedStatement.executeUpdate();
                         System.out.println("success");
                         printStream.println("success");
+                        statement.close();
+                    } catch (Exception e) {
+                        System.out.println("create task failed");
+                        printStream.println("create task failed");
+                        statement.close();
+                    }
+                } else if (test2.compareTo(DateNow) < 0) {
+                    System.out.println("before");
+                    System.out.println("Create Task failed");
+                    printStream.println("Create Task failed");
+                    statement.close();
+                } else if (test2.compareTo(DateNow) == 0) {
+                    System.out.println("same");
+                    System.out.println("Create Task failed");
+                    printStream.println("Create Task failed");
+                    statement.close();
+                }
+
+            } else if (test1.compareTo(test2) < 0) {
+                System.out.println("before");
+                System.out.println("Create Task failed");
+                printStream.println("Create Task failed");
+                statement.close();
+            } else if (test1.compareTo(test2) == 0) {
+                System.out.println("same");
+                System.out.println("Create Task failed");
+                printStream.println("Create Task failed");
+                statement.close();
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ParseException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void FuncCreateTask2(String[] data, String temporary) {
+        try {
+            String ID_job2, JobDate;
+            System.out.println("This is create task");
+            System.out.println(temporary);
+            String[] date2 = temporary.split(",");
+            System.out.println("task Name  : " + data[1]);
+            System.out.println("task Desc  : " + data[2]);
+            System.out.println("task type : " + data[3]);
+            System.out.println("task diff : " + data[4]);
+            System.out.println("Job name : " + data[5]);
+            statement = localconnection_thread.createStatement();
+            System.out.println("SELECT ID_Job,Due_Time FROM job WHERE ID_Job ='" + data[5] + "'");
+            res = statement.executeQuery("SELECT ID_Job,Due_Time FROM job WHERE ID_Job ='" + data[5] + "'");
+            res.next();
+            ID_job2 = res.getString(1);
+            JobDate = res.getString(2);
+            System.out.println("Due Date Job:" + JobDate);
+            String[] JobDateSplit = JobDate.split(" ");
+            JobDate = JobDateSplit[0];
+            statement.close();
+            System.out.println("Due Date Job2 : " + JobDate);
+            System.out.println("Due Date  : " + date2[1]);
+            System.out.println("Due Time  : " + date2[2]);
+            Date DateNow = new Date();
+            Date test1 = df.parse(JobDate);
+            Date test2 = df.parse(date2[1]);
+            String id_supplement2 = Long.toString(System.currentTimeMillis());
+            if (test1.compareTo(test2) > 0) {
+                System.out.println("after");
+                if (test2.compareTo(DateNow) > 0) {
+                    System.out.println("after");
+                    preparedStatement = localconnection_thread.prepareStatement("INSERT INTO `group_work`.`task` (`ID_Task`,`ID_Job`, `Name`, `Description`, `Type`, `Difficulty`, `Due_Time`,`Approved`,`Completed`,`Finished`,`Status`) VALUES ('" + data[1] + "|" + id_supplement2 + "','" + ID_job2 + "', '" + data[1] + "', '" + data[2] + "', '" + data[3] + "', '" + data[4] + "', '" + date2[1] + " " + date2[2] + "','no','no','no','empty')");
+                    System.out.println("INSERT INTO `group_work`.`task` (`ID_Task`,`ID_Job`, `Name`, `Description`, `Type`, `Difficulty`, `Due_Time`,`Approved`,`Completed`,`Finished`,`Status`) VALUES ('" + data[1] + "|" + id_supplement2 + "','" + ID_job2 + "', '" + data[1] + "', '" + data[2] + "', '" + data[3] + "', '" + data[4] + "', '" + date2[1] + " " + date2[2] + "','no','no','no','empty')");
+                    try {
+                        preparedStatement.executeUpdate();
+                        System.out.println("success");
+                        printStream.println(data[1] + "|" + id_supplement2);
                         statement.close();
                     } catch (Exception e) {
                         System.out.println("create task failed");
@@ -2082,7 +2206,7 @@ public class Thread_Server implements Runnable {
                                 try {
                                     preparedStatement.executeUpdate();
                                     System.out.println("Sukses");
-                                    printStream.println("Sukses");
+                                    printStream.println(owner);
                                     preparedStatement.close();
                                 } catch (Exception e) {
                                     System.out.println("failed");

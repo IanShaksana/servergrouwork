@@ -30,8 +30,6 @@ public class Main_Server {
             Class.forName("com.mysql.jdbc.Driver");
             Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/group_work", "root", "lunabeam");
             System.out.println("SQL Connected");
-            //DB_MANAGEMENT newManagement = new DB_MANAGEMENT(connection);
-            //newManagement.run();
 
                         
             while (true) {                
@@ -41,11 +39,7 @@ public class Main_Server {
                 Thread_Server newClient = new Thread_Server(socket,connection);
                 newClient.run();
             }
-        } catch (IOException ex) {
-            Logger.getLogger(Main_Server.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ClassNotFoundException ex) {
-            Logger.getLogger(Main_Server.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (SQLException ex) {
+        } catch (IOException | ClassNotFoundException | SQLException ex) {
             Logger.getLogger(Main_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
