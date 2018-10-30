@@ -23,7 +23,7 @@ public class Main_Server {
     public static void main(String[] args) {
         try {
             System.out.println("Building Server");
-            ServerSocket serverSocket = new ServerSocket(1234);
+            ServerSocket serverSocket = new ServerSocket(1235);
             System.out.println("Build Complete");
 
             System.out.println("Connecting to SQL");

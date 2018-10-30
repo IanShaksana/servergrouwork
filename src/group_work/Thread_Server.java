@@ -35,7 +35,6 @@ public class Thread_Server implements Runnable {
     PrintStream printStream;
     DataInputStream dataInputStream;
     FileOutputStream fileOutputStream;
-    //PrintStream sendData;
     Socket localsocket_thread;
     Connection localconnection_thread;
     Statement statement;
@@ -139,7 +138,7 @@ public class Thread_Server implements Runnable {
                 case "remove_worker":
                     FuncRemoveWorker(data);
                     break;
-                case "finish_job":
+                case "fini":
                     FuncGetFinish(data);
                     break;
                 case "image":
@@ -183,8 +182,14 @@ public class Thread_Server implements Runnable {
                     FuncFIN(data);
                     //FuncFIN2(data);
                     break;
-                case "postornot":
+                case "postorno":
                     FuncStartJob(data);
+                    break;
+                case "upload_img_nm":
+                    FuncCompletetask2(data);
+                    break;
+                case "req_prove":
+                    FuncReqProve(data);
                     break;
                 default:
                     printStream.println("Unknown");
@@ -207,9 +212,12 @@ public class Thread_Server implements Runnable {
             digest.reset();
             digest.update(data[2].getBytes("utf8"));
             String sha1 = String.format("%040x", new BigInteger(1, digest.digest()));
-            //String result = org.apache.commons.codec.digest.DigestUtils.sha1Hex(data[2]);
-            System.out.println("SELECT ID_User from user WHERE `pass`='" + sha1 + "' AND `ID_User`='" + data[1] + "' ");
-            res = statement.executeQuery("SELECT ID_User from user WHERE `pass`='" + sha1 + "' AND `ID_User`='" + data[1] + "' ");
+            System.out.println("SELECT ID_User from user WHERE "
+                    + "`pass`='" + sha1 + "' AND "
+                    + "`ID_User`='" + data[1] + "' ");
+            res = statement.executeQuery("SELECT ID_User from user WHERE "
+                    + "`pass`='" + sha1 + "' AND "
+                    + "`ID_User`='" + data[1] + "' ");
             if (res.next()) {
                 System.out.println("Login Success");
                 printStream.println("Login Success");
@@ -999,6 +1007,27 @@ public class Thread_Server implements Runnable {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+    public void FuncCompletetask2(String[] data) {
+        try {
+            System.out.println("This is complete task2");
+            System.out.println("UPDATE `group_work`.`task` SET `Completed` = 'yes' WHERE `task`.`ID_Task` = '" + data[1] + "'");
+            preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`task` SET `Completed` = 'yes', `prove_nm` = '"+data[2]+"' WHERE `task`.`ID_Task` = '" + data[1] + "'");
+            //UPDATE `group_work`.`task` SET `Completed` = 'yes' WHERE `task`.`ID_Task` = 'testattack|1528525967118';
+            try {
+                preparedStatement.executeUpdate();
+                System.out.println("Success");
+                printStream.println("Success");
+                preparedStatement.close();
+            } catch (Exception e) {
+                System.out.println("Failed");
+                printStream.println("failed");
+                preparedStatement.close();
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
     public void FuncAbandonTask(String[] data) {
         try {
@@ -1170,6 +1199,27 @@ public class Thread_Server implements Runnable {
         } catch (SQLException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    public void FuncReqProve(String[] data){
+        try {
+            System.out.println("SELECT prove_nm FROM task WHERE ID_Task='" + data[1] + "'");
+            res = statement.executeQuery("SELECT prove_nm FROM task WHERE ID_Task='" + data[1] + "'");
+            res.next();
+            String pesan =res.getString(1);
+            
+            if(pesan==null){
+                System.out.println("failed no prove");
+                printStream.println("failed no prove");
+            }else{
+                System.out.println(res.getString(1));
+                printStream.println(res.getString(1));
+            }
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
     }
 
     public void FuncApproveYes(String[] data) {
@@ -2206,7 +2256,7 @@ public class Thread_Server implements Runnable {
                                 try {
                                     preparedStatement.executeUpdate();
                                     System.out.println("Sukses");
-                                    printStream.println(owner);
+                                    printStream.println(owner+"|"+data[1] + "-apply-" + data[2] );
                                     preparedStatement.close();
                                 } catch (Exception e) {
                                     System.out.println("failed");
@@ -2246,7 +2296,7 @@ public class Thread_Server implements Runnable {
                         try {
                             preparedStatement.executeUpdate();
                             System.out.println("Sukses");
-                            printStream.println("Sukses");
+                            printStream.println(request);
                             preparedStatement.close();
                         } catch (Exception e) {
                             System.out.println("failed");
@@ -2364,7 +2414,7 @@ public class Thread_Server implements Runnable {
     public void FuncReply(String[] data) {
         String condition1 = "", condition2 = "", condition3 = "", condition4 = "";
         String message = "";
-        int Qty_Cur_w = 0, Qty_Max_w = 0;
+        int Qty_Cur_w = 0, Qty_Max_w = 0, Qty_already=0;
         switch (data[1]) {
             case "apply_yes":
                 try {
@@ -2383,6 +2433,7 @@ public class Thread_Server implements Runnable {
                     System.out.println("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_job + "'");
                     res = statement.executeQuery("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_job + "'");
                     res.next();
+                    Qty_already = Integer.parseInt(res.getString(1));
                     Qty_Cur_w = 1 + Integer.parseInt(res.getString(1));
 
                     System.out.println("SELECT Max_Worker FROM job WHERE ID_Job ='" + ID_job + "'");
@@ -2473,7 +2524,7 @@ public class Thread_Server implements Runnable {
 //                                preparedStatement.close();
 //                            }
                             System.out.println("Already joined job");
-                            printStream.println("success");
+                            printStream.println("succes-"+ID_job+"-"+Qty_already);
                         } else {
                             System.out.println("INSERT INTO `group_work`.`grouping` (`ID_Grouping`, `ID_User`, `ID_Job`, `Role`,`Finished`) VALUES (NULL, '" + data[3] + "', '" + ID_job + "', 'Member','no');");
                             preparedStatement = localconnection_thread.prepareStatement("INSERT INTO `group_work`.`grouping` (`ID_Grouping`, `ID_User`, `ID_Job`, `Role`,`Finished`) VALUES (NULL, '" + data[3] + "', '" + ID_job + "', 'Member','no');");
@@ -2495,7 +2546,8 @@ public class Thread_Server implements Runnable {
                             try {
                                 preparedStatement.executeUpdate();
                                 System.out.println("success adding job");
-                                printStream.println("success");
+                                System.out.println("succes-"+ID_job+"-"+Qty_Cur_w);
+                                printStream.println("succes-"+ID_job+"-"+Qty_Cur_w);
                                 preparedStatement.close();
                             } catch (Exception e) {
                                 System.out.println("failed adding job");
@@ -2563,7 +2615,7 @@ public class Thread_Server implements Runnable {
                     //get id job
 
                     if (condition1.equals("sukses") && condition2.equals("sukses") && condition3.equals("sukses")) {
-                        message = data[3] + "-" + data[5] + "-" + data[6];
+                        message = data[4] + "-" + data[5] + "-" + data[6];
                         System.out.println(message);
                         //delete that message
                         /*
@@ -2586,12 +2638,12 @@ public class Thread_Server implements Runnable {
                             printStream.println("failed reply");
                         }
 
-                        preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`task` SET `ID_User` = '" + data[3] + "', `Status`='on' WHERE `task`.`ID_Task` = '" + data[2] + "';");
-                        System.out.println("UPDATE `group_work`.`task` SET `ID_User` = '" + data[3] + "', `Status`='on' WHERE `task`.`ID_Task` = '" + data[2] + "';");
+                        preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`task` SET `ID_User` = '" + data[4] + "', `Status`='on' WHERE `task`.`ID_Task` = '" + data[2] + "';");
+                        System.out.println("UPDATE `group_work`.`task` SET `ID_User` = '" + data[4] + "', `Status`='on' WHERE `task`.`ID_Task` = '" + data[2] + "';");
                         try {
                             preparedStatement.executeUpdate();
                             System.out.println("success apply");
-                            printStream.println("sukses");
+                            printStream.println(ID_job+"-"+data[4]);
                         } catch (Exception e) {
                             System.out.println("failed apply");
                             printStream.println("failed");
@@ -2632,7 +2684,7 @@ public class Thread_Server implements Runnable {
                 break;
             case "assign_reject":
                 try {
-                    message = data[3] + "-" + data[5] + "-" + data[6];
+                    message = data[4] + "-" + data[5] + "-" + data[6];
                     System.out.println("UPDATE `group_work`.`message` SET `confirmation` = 'rejected' WHERE `message`.`message` = '" + message + "';");
                     preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`message` SET `confirmation` = 'rejected' WHERE `message`.`message` = '" + message + "';");
                 } catch (SQLException ex) {
