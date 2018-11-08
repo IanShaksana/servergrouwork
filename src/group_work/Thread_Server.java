@@ -1,6 +1,7 @@
 package group_work;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -8,10 +9,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.net.HttpURLConnection;
 import java.net.Socket;
+import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
@@ -25,6 +29,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.json.simple.JSONObject;
 
 public class Thread_Server implements Runnable {
 
@@ -1070,8 +1075,29 @@ public class Thread_Server implements Runnable {
 
     public void FuncAbandonGroup(String[] data) {
         try {
+            int Qty_Cur_w = 0, Qty_Max_w = 0;
             int NumberOfTask = 0;
             int i = 0;
+            int a = 0;
+            String ID_job = data[1];
+            
+            //listing task to update firebase
+            String append;
+            String appendix = "";
+
+            System.out.println("SELECT ID_Task FROM task WHERE ID_User ='" + data[2] + "'");
+            res = statement.executeQuery("SELECT ID_Task FROM task WHERE ID_User ='" + data[2] + "'");
+            while (res.next()) {
+                System.out.println("result : " + res.getString(1));
+                append = res.getString(1);
+                if (a == 0) {
+                    appendix = append;
+                } else {
+                    appendix = appendix + "-" + append;
+                }
+                a++;
+            }
+            
             //delete messagenya
             System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + data[1] + "' ");
             res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + data[1] + "' ");
@@ -1131,10 +1157,31 @@ public class Thread_Server implements Runnable {
             try {
                 preparedStatement.executeUpdate();
                 System.out.println("Success abandon all task");
-                printStream.println("Success");
+                //printStream.println("Success");
                 preparedStatement.close();
             } catch (Exception e) {
                 System.out.println("Failed abandon all task");
+                //printStream.println("failed");
+                preparedStatement.close();
+            }
+            
+            
+            
+            //ta kurangi di groupnya
+            System.out.println("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_job + "'");
+            res = statement.executeQuery("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_job + "'");
+            res.next();
+            Qty_Cur_w = Integer.parseInt(res.getString(1)) - 1;
+
+            System.out.println("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "'");
+            preparedStatement = localconnection_thread.prepareStatement("UPDATE `group_work`.`job` SET `Current_Worker` = '" + Qty_Cur_w + "' WHERE `job`.`ID_Job` = '" + ID_job + "'");
+            try {
+                preparedStatement.executeUpdate();
+                System.out.println(Qty_Cur_w + "-LISTJOB-" + appendix);
+                printStream.println(Qty_Cur_w + "-LISTJOB-" + appendix);
+                preparedStatement.close();
+            } catch (Exception e) {
+                System.out.println("Failed minus worker");
                 printStream.println("failed");
                 preparedStatement.close();
             }
@@ -2310,6 +2357,7 @@ public class Thread_Server implements Runnable {
                                     preparedStatement.executeUpdate();
                                     System.out.println("Sukses");
                                     printStream.println(owner + "|" + data[1] + "-apply-" + data[2]);
+                                    postData(owner+"-"+data[1]+" apply to your task-Apply Request");
                                     preparedStatement.close();
                                 } catch (Exception e) {
                                     System.out.println("failed");
@@ -2350,6 +2398,7 @@ public class Thread_Server implements Runnable {
                             preparedStatement.executeUpdate();
                             System.out.println("Sukses");
                             printStream.println(request);
+                            postData(data[1]+"-"+owner+" has message for you-Assign Permission");
                             preparedStatement.close();
                         } catch (Exception e) {
                             System.out.println("failed");
@@ -2404,6 +2453,7 @@ public class Thread_Server implements Runnable {
                                     preparedStatement.executeUpdate();
                                     System.out.println("Sukses");
                                     printStream.println(request);
+                                    postData(data[1]+"-"+owner+" has message for you-Invite Permission");
                                     preparedStatement.close();
                                 } catch (Exception e) {
                                     System.out.println("failed");
@@ -2448,6 +2498,7 @@ public class Thread_Server implements Runnable {
                             preparedStatement.executeUpdate();
                             System.out.println("Sukses");
                             printStream.println("Sukses");
+                            postData(member[count]+"-Time to vote-Invite Permission");
                             preparedStatement.close();
                         } catch (Exception e) {
                             System.out.println("failed");
@@ -3031,6 +3082,60 @@ public class Thread_Server implements Runnable {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
 
+    }
+    
+    //Post Data
+    private void postData(String topic) throws IOException {
+        String[] data = topic.split("-");
+        StringBuilder result = new StringBuilder();
+        BufferedReader bufferedReader = null;
+        BufferedWriter bufferedWriter = null;
+
+        try {
+            //Create data to send to server
+            JSONObject dataToSend = new JSONObject();
+            JSONObject dataToSend2 = new JSONObject();
+            System.out.println("json object");
+            System.out.println("body " +data[1]);
+            System.out.println("title " +data[2]);
+            System.out.println("to " +data[0]);
+
+            dataToSend2.put("body", data[1]);
+            dataToSend2.put("title", data[2]);
+            dataToSend.put("notification", dataToSend2);
+            dataToSend.put("to", "/topics/"+data[0]);
+
+            //Initialize and config request, then connect to server
+            String urlpath = "https://fcm.googleapis.com/fcm/send";
+            URL url = new URL(urlpath);
+            HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setRequestMethod("POST");
+            urlConnection.setDoOutput(true); // enable output (body data)
+            urlConnection.setRequestProperty("Content-Type", "application/json"); // set header
+            urlConnection.setRequestProperty("Authorization", "key=AAAAQ2NNxbo:APA91bFyfuWOeFmqz2GgvsIWJ6ZGO9rRt3y_ZvgIgU3qYy4idI08McSF7qcAKaxDJUc8xU1SrWWzQijADNQwwD3b8-JdcPjqQp33vvG14eq-kkvagesmbizf-JNI6I4uDrQa7JvZZFqU"); // set header
+            urlConnection.connect();
+
+            //Write data into server
+            OutputStream outputStream = urlConnection.getOutputStream();
+            bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
+            bufferedWriter.write(dataToSend.toString());
+            bufferedWriter.flush();
+
+            InputStream inputStream = urlConnection.getInputStream();
+            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                result.append(line).append("\n");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (bufferedWriter != null) {
+                bufferedWriter.close();
+            }
+        }
+        System.out.println("result = "+result.toString());
     }
 
 }
