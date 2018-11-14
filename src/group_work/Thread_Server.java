@@ -1,5 +1,9 @@
 package group_work;
 
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.WriteResult;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
@@ -27,6 +31,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
@@ -47,10 +52,12 @@ public class Thread_Server implements Runnable {
     ResultSet res;
     DateFormat df;
     DateFormat df2;
+    Firestore db;
     int i;
 
-    public Thread_Server(Socket socket, Connection connection) {
+    public Thread_Server(Socket socket, Connection connection, Firestore db) {
         try {
+            this.db = db;
             localsocket_thread = socket;
             localconnection_thread = connection;
             bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -143,7 +150,7 @@ public class Thread_Server implements Runnable {
                 case "remove_worker":
                     FuncRemoveWorker(data);
                     break;
-                case "fini":
+                case "finish_job":
                     FuncGetFinish(data);
                     break;
                 case "image":
@@ -702,9 +709,11 @@ public class Thread_Server implements Runnable {
                     preparedStatement.executeUpdate();
                     System.out.println("Create group done");
                     printStream.println(ID_job);
+                    postFB("create_job", "List_Job/" + ID_job, data, date);
                     statement.close();
                 } catch (Exception e) {
                     System.out.println("Create group failed");
+                    System.out.println(e);
                     printStream.println("Create group failed");
                     statement.close();
                 }
@@ -1080,7 +1089,7 @@ public class Thread_Server implements Runnable {
             int i = 0;
             int a = 0;
             String ID_job = data[1];
-            
+
             //listing task to update firebase
             String append;
             String appendix = "";
@@ -1097,7 +1106,7 @@ public class Thread_Server implements Runnable {
                 }
                 a++;
             }
-            
+
             //delete messagenya
             System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + data[1] + "' ");
             res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + data[1] + "' ");
@@ -1164,9 +1173,7 @@ public class Thread_Server implements Runnable {
                 //printStream.println("failed");
                 preparedStatement.close();
             }
-            
-            
-            
+
             //ta kurangi di groupnya
             System.out.println("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_job + "'");
             res = statement.executeQuery("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_job + "'");
@@ -1468,14 +1475,18 @@ public class Thread_Server implements Runnable {
                 if (test2.compareTo(DateNow) > 0) {
                     System.out.println("after");
                     preparedStatement = localconnection_thread.prepareStatement("INSERT INTO `group_work`.`task` (`ID_Task`,`ID_Job`, `Name`, `Description`, `Type`, `Difficulty`, `Due_Time`,`Approved`,`Completed`,`Finished`,`Status`) VALUES ('" + data[1] + "|" + id_supplement2 + "','" + ID_job2 + "', '" + data[1] + "', '" + data[2] + "', '" + data[3] + "', '" + data[4] + "', '" + date2[1] + " " + date2[2] + "','no','no','no','empty')");
-                    System.out.println("INSERT INTO `group_work`.`task` (`ID_Task`,`ID_Job`, `Name`, `Description`, `Type`, `Difficulty`, `Due_Time`,`Approved`,`Completed`,`Finished`,`Status`) VALUES ('" + data[1] + "|" + id_supplement2 + "','" + ID_job2 + "', '" + data[1] + "', '" + data[2] + "', '" + data[3] + "', '" + data[4] + "', '" + date2[1] + " " + date2[2] + "','no','no','no','empty')");
+                    System.out.println("INSERT INTO `group_work`.`task` "
+                            + "(`ID_Task`,`ID_Job`, `Name`, `Description`, `Type`, `Difficulty`, `Due_Time`,`Approved`,`Completed`,`Finished`,`Status`) VALUES "
+                            + "('" + data[1] + "|" + id_supplement2 + "','" + ID_job2 + "', '" + data[1] + "', '" + data[2] + "', '" + data[3] + "', '" + data[4] + "', '" + date2[1] + " " + date2[2] + "','no','no','no','empty')");
                     try {
                         preparedStatement.executeUpdate();
                         System.out.println("success");
                         printStream.println(data[1] + "|" + id_supplement2);
+                        postFB("create_task", "List_Job/" + ID_job2 + "/List_Task/" + data[1] + "|" + id_supplement2, data, date2);
                         statement.close();
                     } catch (Exception e) {
                         System.out.println("create task failed");
+                        System.out.println(e);
                         printStream.println("create task failed");
                         statement.close();
                     }
@@ -1851,7 +1862,7 @@ public class Thread_Server implements Runnable {
                 dex = res.getString(4);
                 intl = res.getString(5);
                 Nxt_Exp = res.getString(6);
-                int totalExp = 0, totalStr = Integer.parseInt(str), totalDex = Integer.parseInt(dex), totalIntl = Integer.parseInt(intl);
+                int totalExp = Integer.parseInt(exp), totalStr = Integer.parseInt(str), totalDex = Integer.parseInt(dex), totalIntl = Integer.parseInt(intl);
                 //the user
 
                 //select all task approved
@@ -1989,7 +2000,7 @@ public class Thread_Server implements Runnable {
             dex = res.getString(4);
             intl = res.getString(5);
             Nxt_Exp = res.getString(6);
-            int totalExp = 0, totalStr = Integer.parseInt(str), totalDex = Integer.parseInt(dex), totalIntl = Integer.parseInt(intl);
+            int totalExp = Integer.parseInt(exp), totalStr = Integer.parseInt(str), totalDex = Integer.parseInt(dex), totalIntl = Integer.parseInt(intl);
             //the user
 
             //select all task approved
@@ -2357,7 +2368,7 @@ public class Thread_Server implements Runnable {
                                     preparedStatement.executeUpdate();
                                     System.out.println("Sukses");
                                     printStream.println(owner + "|" + data[1] + "-apply-" + data[2]);
-                                    postData(owner+"-"+data[1]+" apply to your task-Apply Request");
+                                    postData(owner + "-" + data[1] + " apply to your task-Apply Request");
                                     preparedStatement.close();
                                 } catch (Exception e) {
                                     System.out.println("failed");
@@ -2398,7 +2409,7 @@ public class Thread_Server implements Runnable {
                             preparedStatement.executeUpdate();
                             System.out.println("Sukses");
                             printStream.println(request);
-                            postData(data[1]+"-"+owner+" has message for you-Assign Permission");
+                            postData(data[1] + "-" + owner + " has message for you-Assign Permission");
                             preparedStatement.close();
                         } catch (Exception e) {
                             System.out.println("failed");
@@ -2453,7 +2464,7 @@ public class Thread_Server implements Runnable {
                                     preparedStatement.executeUpdate();
                                     System.out.println("Sukses");
                                     printStream.println(request);
-                                    postData(data[1]+"-"+owner+" has message for you-Invite Permission");
+                                    postData(data[1] + "-" + owner + " has message for you-Invite Permission");
                                     preparedStatement.close();
                                 } catch (Exception e) {
                                     System.out.println("failed");
@@ -2490,23 +2501,50 @@ public class Thread_Server implements Runnable {
                         i++;
                     }
                     int count = 0;
-
+                    String con = "";
                     while (count < member.length) {
                         System.out.println("INSERT INTO `group_work`.`message` (`ID`, `sender`, `recepient`,`type`, `message`,`confirmation`) VALUES (NULL, 'System', '" + member[count] + "','vote', '" + member[count] + "-vote-" + owner + "-" + data[1] + "-" + "','send');");
                         preparedStatement = localconnection_thread.prepareStatement("INSERT INTO `group_work`.`message` (`ID`, `sender`, `recepient`,`type`, `message`,`confirmation`) VALUES (NULL, 'System', '" + member[count] + "','vote', '" + member[count] + "-vote-" + owner + "-" + data[1] + "-" + "','send');");
                         try {
                             preparedStatement.executeUpdate();
                             System.out.println("Sukses");
-                            printStream.println("Sukses");
-                            postData(member[count]+"-Time to vote-Invite Permission");
+                            con = "sukses";
+                            postData(member[count] + "-Time to vote-Invite Permission");
                             preparedStatement.close();
                         } catch (Exception e) {
                             System.out.println("failed");
-                            printStream.println("failed");
+                            con = "failed";
                             preparedStatement.close();
                         }
                         count++;
                     }
+
+                    //listing task to update firebase
+                    String append;
+                    String appendix = "";
+                    int a = 0;
+
+                    System.out.println("Select ID_User from grouping where ID_Job = '" + data[1] + "' AND Role='Member'");
+                    res = statement.executeQuery("Select ID_User from grouping where ID_Job = '" + data[1] + "' AND Role='Member'");
+
+                    while (res.next()) {
+                        System.out.println("result : " + res.getString(1));
+                        append = res.getString(1);
+                        if (a == 0) {
+                            appendix = append;
+                        } else {
+                            appendix = appendix + "-" + append;
+                        }
+                        a++;
+                    }
+
+                    if (con.equals("sukses")) {
+                        System.out.println(owner + "-" + data[1] + "-" + appendix);
+                        printStream.println(owner + "-" + data[1] + "-" + appendix);
+                    } else {
+                        printStream.println("failed");
+                    }
+
                 } catch (SQLException ex) {
                     Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -2893,7 +2931,7 @@ public class Thread_Server implements Runnable {
                             try {
                                 preparedStatement.executeUpdate();
                                 System.out.println("success adding job");
-                                printStream.println(ID_job+"-"+Qty_Cur_w);
+                                printStream.println(ID_job + "-" + Qty_Cur_w);
                                 preparedStatement.close();
                             } catch (Exception e) {
                                 System.out.println("failed adding job");
@@ -2960,7 +2998,6 @@ public class Thread_Server implements Runnable {
 
                     //get reward
                     FuncGetRewardSingle(data[3], ID_job);
-
                     printStream.println("sukses");
                 } catch (SQLException ex) {
                     Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
@@ -2998,7 +3035,6 @@ public class Thread_Server implements Runnable {
 
                     //get reward
                     FuncGetRewardSingle(data[3], ID_job);
-
                     printStream.println("sukses");
                 } catch (SQLException ex) {
                     Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
@@ -3083,7 +3119,8 @@ public class Thread_Server implements Runnable {
         }
 
     }
-    
+
+    //FIREBASE
     //Post Data
     private void postData(String topic) throws IOException {
         String[] data = topic.split("-");
@@ -3096,14 +3133,14 @@ public class Thread_Server implements Runnable {
             JSONObject dataToSend = new JSONObject();
             JSONObject dataToSend2 = new JSONObject();
             System.out.println("json object");
-            System.out.println("body " +data[1]);
-            System.out.println("title " +data[2]);
-            System.out.println("to " +data[0]);
+            System.out.println("body " + data[1]);
+            System.out.println("title " + data[2]);
+            System.out.println("to " + data[0]);
 
             dataToSend2.put("body", data[1]);
             dataToSend2.put("title", data[2]);
             dataToSend.put("notification", dataToSend2);
-            dataToSend.put("to", "/topics/"+data[0]);
+            dataToSend.put("to", "/topics/" + data[0]);
 
             //Initialize and config request, then connect to server
             String urlpath = "https://fcm.googleapis.com/fcm/send";
@@ -3135,7 +3172,43 @@ public class Thread_Server implements Runnable {
                 bufferedWriter.close();
             }
         }
-        System.out.println("result = "+result.toString());
+        System.out.println("result = " + result.toString());
+    }
+
+    //upload to firebase
+    private void postFB(String type, String docRef, String[] data, String[] date) {
+        try {
+            System.out.println("Type : " + type);
+            System.out.println("Write to : " + docRef);
+            DocumentReference noteRef = db.document(docRef);
+            ApiFuture<WriteResult> result1;
+            switch (type) {
+                case "create_job":
+                    result1 = noteRef.set(new createJob(data[1], data[2], date[1] + " " + date[2], data[4], "0", "on", data[3]));
+                    System.out.println("Update time : " + result1.get().getUpdateTime());
+                    break;
+                case "create_task":
+                    result1 = noteRef.set(new createTask(data[1], data[2], data[4], data[3], date[1], date[2], "none", "on"));
+                    System.out.println("Update time : " + result1.get().getUpdateTime());
+                    break;
+                case "messaging":
+                    break;
+                case "abandon":
+                    break;
+                case "finished":
+                    break;
+                case "update":
+                    result1 = noteRef.update("slotnow", "100");
+                    System.out.println("Update time : " + result1.get().getUpdateTime());
+                    break;
+                default:
+                    System.out.println("Unknown");
+                    break;
+            }
+            System.out.println("FB process done");
+        } catch (InterruptedException | ExecutionException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 }

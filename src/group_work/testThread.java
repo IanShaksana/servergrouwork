@@ -30,7 +30,7 @@ public class testThread implements Runnable {
     ServerSocket localserversocket_thread;
     DateFormat df2;
 
-    public testThread(Socket s,ServerSocket sS) {
+    public testThread(Socket s, ServerSocket sS) {
         try {
             df2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             localserversocket_thread = sS;
@@ -58,11 +58,34 @@ public class testThread implements Runnable {
                 case "PING":
                     printStream.println("PING");
                     break;
+                case "test1":
+                    int i = 0;
+                    while (i != 4) {
+                        Thread.sleep(1000);
+                        System.out.println(i);
+                        printStream.println("result from test1");
+                        i++;
+                    }
+                    System.out.println("end of test 1");
+                    break;
+                case "test2":
+                    int a = 0;
+                    while (a != 4) {
+                        Thread.sleep(1000);
+                        System.out.println(a);
+                        printStream.println("result from test2");
+                        a++;
+                    }
+                    System.out.println("end of test 2");
+                    break;
+
                 default:
                     break;
             }
 
         } catch (IOException ex) {
+            Logger.getLogger(testThread.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
             Logger.getLogger(testThread.class.getName()).log(Level.SEVERE, null, ex);
         }
     }

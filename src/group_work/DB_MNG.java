@@ -5,9 +5,6 @@
  */
 package group_work;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -28,7 +25,7 @@ public class DB_MNG {
             Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/group_work", "root", "lunabeam");
             System.out.println("SQL Connected");
             DB_MANAGEMENT newManagement = new DB_MANAGEMENT(connection);
-            newManagement.run();
+            new Thread(newManagement).start();
 
                         
         } catch (ClassNotFoundException ex) {
