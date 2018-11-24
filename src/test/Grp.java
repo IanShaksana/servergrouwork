@@ -15,6 +15,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Connection;
@@ -35,7 +36,8 @@ public class Grp {
     public static void main(String[] args) {
         try {
             System.out.println("Building Server");
-            ServerSocket serverSocket = new ServerSocket(1236);
+            ServerSocket serverSocket = new ServerSocket();
+            serverSocket.bind(new InetSocketAddress("203.189.123.200", 1236));
             System.out.println("Build Complete");
             
             System.out.println("Building FB");
@@ -47,7 +49,7 @@ public class Grp {
             Connection connection = DriverManager.getConnection("jdbc:mysql://telematics.petra.ac.id/gamification", "adrian", "ian123");
             System.out.println("SQL Connected");
             
-            new Thread(new DB_MANAGEMENT(connection)).start();
+            new Thread(new DB_MANAGEMENT(connection,db)).start();
 
             while (true) {
                 System.out.println("Waiting incoming socket connection");

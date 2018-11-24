@@ -5,6 +5,10 @@
  */
 package test;
 
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.WriteResult;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -23,6 +27,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,13 +46,15 @@ public class DB_MANAGEMENT implements Runnable {
     ResultSet res;
     PreparedStatement preparedStatement;
     Date SysDate;
+    Firestore db;
 
-    public DB_MANAGEMENT(Connection connection) {
+    public DB_MANAGEMENT(Connection connection, Firestore db) {
         try {
+            this.db = db;
             localconnection_thread = connection;
             df = new SimpleDateFormat("yyyy-MM-dd");
             df3 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            df2 = new SimpleDateFormat("HH:mm");
+            df2 = new SimpleDateFormat("HH:mm:ss");
             statement = localconnection_thread.createStatement();
 
         } catch (SQLException ex) {
@@ -63,7 +70,7 @@ public class DB_MANAGEMENT implements Runnable {
                 SysDate = new Date();
                 Date now = df2.parse(df2.format(SysDate));
                 //System.out.println(SysDate);
-                if (now.equals(df2.parse("18:41"))) {
+                if (now.equals(df2.parse("07:00:00"))) {
                     //System.out.println("LOLLLLL");
                     ReminderDueDate_Job();
                     ReminderDueDate_Task();
@@ -96,14 +103,16 @@ public class DB_MANAGEMENT implements Runnable {
             }
             String[] Task_time = new String[count];
             String[] ID_Task = new String[count];
+            String[] ID_Job = new String[count];
 
             count = 0;
             //System.out.println("SELECT ID_Task,Due_Time FROM task WHERE Completed ='no' ");
-            res = statement.executeQuery("SELECT ID_Task,Due_Time FROM task WHERE Completed ='no' ");
+            res = statement.executeQuery("SELECT ID_Task,Due_Time,ID_Job FROM task WHERE Completed ='no' ");
             while (count < Task_time.length) {
                 res.next();
                 ID_Task[count] = res.getString(1);
                 Task_time[count] = res.getString(2);
+                ID_Job[count] = res.getString(3);
                 count++;
             }
 
@@ -123,6 +132,9 @@ public class DB_MANAGEMENT implements Runnable {
                     //System.out.println("UPDATE `gamification`.`task` SET `ID_User` = NULL, `Approved` = 'no', `Completed` = 'no', Finished = 'yes',  `Status` ='late' WHERE `task`.`ID_Task` = '" + ID_Task[count] + "'");
                     preparedStatement = localconnection_thread.prepareStatement("UPDATE `gamification`.`task` SET `ID_User` = NULL, `Approved` = 'no', `Completed` = 'no', Finished = 'yes', `Status` ='late' WHERE `task`.`ID_Task` = '" + ID_Task[count] + "'");
                     preparedStatement.executeUpdate();
+                    //late
+                    postTask("List_Job/"+ID_Job[count]+"/List_Task/"+ID_Task[count]);
+
                 } else if (DATE.compareTo(Task_Date) < 0) {
                     //System.out.println(Sys_Date + " is before " + Print_task_Date);
                 } else if (DATE.compareTo(Task_Date) == 0) {
@@ -164,7 +176,7 @@ public class DB_MANAGEMENT implements Runnable {
                 Task_time[count] = res.getString(2);
                 User[count] = res.getString(3);
                 Completed_time[count] = res.getString(4);
-                if (Completed_time[count]!=null) {
+                if (Completed_time[count] != null) {
                     //System.out.println("--------------------------------------------");
                     Date DATE = new Date();
 
@@ -232,9 +244,11 @@ public class DB_MANAGEMENT implements Runnable {
                 if (DATE.compareTo(Task_Date) > 0) {
                     //System.out.println(Sys_Date + " is after " + Print_task_Date);
                     //System.out.println("UPDATE `gamification`.`job` SET `Status`='end' WHERE `job`.`ID_Job` = '" + ID_Job[count] + "'");
-                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `gamification`.`job` SET `Status`='end' WHERE `job`.`ID_Job` = '" + ID_Job[count] + "'");
+                    preparedStatement = localconnection_thread.prepareStatement("UPDATE `gamification`.`job` SET `Status`='end', `Finished`='yes' WHERE `job`.`ID_Job` = '" + ID_Job[count] + "'");
                     preparedStatement.executeUpdate();
                     duetime = "no";
+                    //late
+                    postJob("List_Job/"+ID_Job[count]);
                 } else if (DATE.compareTo(Task_Date) < 0) {
                     //System.out.println(Sys_Date + " is before " + Print_task_Date);
                     //System.out.println("UPDATE `gamification`.`job` SET `Status`='on' WHERE `job`.`ID_Job` = '" + ID_Job[count] + "'");
@@ -245,7 +259,8 @@ public class DB_MANAGEMENT implements Runnable {
                     //System.out.println(Sys_Date + " is the same " + Print_task_Date);
                     duetime = "no";
                 }
-
+                
+                /*
                 int QtyCurW = 0, QtyMax = 0;
                 if (duetime.equals("yes")) {
                     //System.out.println("SELECT Current_Worker FROM job WHERE ID_Job ='" + ID_Job[count] + "' ");
@@ -266,7 +281,7 @@ public class DB_MANAGEMENT implements Runnable {
                         preparedStatement = localconnection_thread.prepareStatement("UPDATE `gamification`.`job` SET `Status`='full' WHERE `job`.`ID_Job` = '" + ID_Job[count] + "'");
                         preparedStatement.executeUpdate();
                     }
-                }
+                }*/
 
                 count++;
                 //System.out.println("--------------------------------------------");
@@ -318,12 +333,10 @@ public class DB_MANAGEMENT implements Runnable {
                 //System.out.println("This is for JOB ID : " + ID_Job[count]);
                 ////System.out.println("Date now: " + Sys_Date);
                 ////System.out.println("Task date: " + Print_task_Date);
-
                 long diff = Job_Date.getTime() - Now_Date.getTime();
                 diff = TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS);
 
                 //System.err.println("remaining : " + diff);
-
                 postData("job", Owner[count], diff, ID_Job[count]);
 
                 count++;
@@ -475,6 +488,33 @@ public class DB_MANAGEMENT implements Runnable {
             }
         }
         //System.out.println("result = " + result.toString());
+    }
+
+    private void postTask(String docRef) {
+        try {
+
+            DocumentReference noteRef = db.document(docRef);
+            ApiFuture<WriteResult> result1;
+            result1 = noteRef.update("status", "late");
+            result1.get().getUpdateTime();
+
+            //System.out.println("FB process done");
+        } catch (InterruptedException | ExecutionException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private void postJob(String docRef) {
+        try {
+           DocumentReference noteRef = db.document(docRef);
+            ApiFuture<WriteResult> result1;
+            result1 = noteRef.update("status", "late");
+            result1.get().getUpdateTime();
+            
+            //System.out.println("FB process done");
+        } catch (InterruptedException | ExecutionException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 }
