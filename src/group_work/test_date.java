@@ -24,6 +24,7 @@ public class test_date {
         Date DATE = new Date();
         Date test1 = df1.parse("2018-11-30");
         Date test2 = df1.parse(df1.format(DATE));
+        Date test3 = df2.parse("2018-12-01 12:00:00");
         long diff = test1.getTime() - test2.getTime();
         
         diff = TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS);
@@ -36,6 +37,7 @@ public class test_date {
         }
         System.out.println(test1);
         System.out.println(test2);
+        System.out.println(test3);
         System.out.println(Sys_Date);
         System.out.println(diff);
     }

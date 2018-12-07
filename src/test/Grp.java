@@ -21,6 +21,8 @@ import java.net.Socket;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,12 +36,16 @@ public class Grp {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        Socket socket = null;
         try {
+            //DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
             System.out.println("Building Server");
             ServerSocket serverSocket = new ServerSocket();
+            serverSocket.setPerformancePreferences(1, 0, 0);
+            //serverSocket.setSoTimeout(5000);
             serverSocket.bind(new InetSocketAddress("203.189.123.200", 1236));
             System.out.println("Build Complete");
-            
+
             System.out.println("Building FB");
             Firestore db = postFB();
             System.out.println("Build FB Complete");
@@ -48,15 +54,18 @@ public class Grp {
             Class.forName("com.mysql.jdbc.Driver");
             Connection connection = DriverManager.getConnection("jdbc:mysql://telematics.petra.ac.id/gamification", "adrian", "ian123");
             System.out.println("SQL Connected");
-            
-            new Thread(new DB_MANAGEMENT(connection,db)).start();
+
+            new Thread(new DB_MANAGEMENT(connection, db)).start();
 
             while (true) {
+                Connection connection1 = DriverManager.getConnection("jdbc:mysql://telematics.petra.ac.id/gamification", "adrian", "ian123");
                 System.out.println("Waiting incoming socket connection");
-                Socket socket = serverSocket.accept();
+                socket = serverSocket.accept();
                 System.out.println("Connected to client address: " + socket.getInetAddress());
+                //LocalDateTime now = LocalDateTime.now();
+                System.out.println("Start : "+java.time.LocalTime.now());
                 //Thread_Server newClient = new Thread_Server(socket, db);
-                Thread_Server newClient = new Thread_Server(socket, connection,db);
+                Thread_Server newClient = new Thread_Server(socket, connection1, db);
                 new Thread(newClient).start();
             }
         } catch (IOException | ClassNotFoundException | SQLException ex) {

@@ -47,6 +47,7 @@ public class DB_MANAGEMENT implements Runnable {
     PreparedStatement preparedStatement;
     Date SysDate;
     Firestore db;
+    String con ;
 
     public DB_MANAGEMENT(Connection connection, Firestore db) {
         try {
@@ -56,6 +57,7 @@ public class DB_MANAGEMENT implements Runnable {
             df3 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             df2 = new SimpleDateFormat("HH:mm:ss");
             statement = localconnection_thread.createStatement();
+            con = "yes";
 
         } catch (SQLException ex) {
             Logger.getLogger(DB_MANAGEMENT.class.getName()).log(Level.SEVERE, null, ex);
@@ -66,30 +68,27 @@ public class DB_MANAGEMENT implements Runnable {
     public void run() {
         while (true) {
             try {
-                //
                 SysDate = new Date();
                 Date now = df2.parse(df2.format(SysDate));
                 //System.out.println(SysDate);
-                if (now.equals(df2.parse("07:00:00"))) {
-                    //System.out.println("LOLLLLL");
+                if (now.equals(df2.parse("07:00:00")) && con.equals("yes")) {
+                    System.out.println("Checking");
                     ReminderDueDate_Job();
                     ReminderDueDate_Task();
+                    FuncCheckDueDate_Job();
+                    FuncCheckDueDate_Task();
+                    con = "no";
                 }
-
-                //System.out.println("this is task");
-                FuncCheckDueDate_Task();
-
-                //System.out.println("this is job");
-                FuncCheckDueDate_Job();
-
-                //
-                ////System.out.println("this is cashin");
-                //FuncCashIn();
+                
+                if (now.equals(df2.parse("07:05:00")) && con.equals("no")) {
+                    System.out.println("Done checking");
+                    con = "yes";
+                }
+                
             } catch (ParseException ex) {
                 Logger.getLogger(DB_MANAGEMENT.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        //To change body of generated methods, choose Tools | Templates.
     }
 
     public void FuncCheckDueDate_Task() {
@@ -234,28 +233,28 @@ public class DB_MANAGEMENT implements Runnable {
             while (count < ID_Job.length) {
                 //System.out.println("--------------------------------------------");
                 Date DATE = new Date();
-                String Sys_Date = df3.format(DATE);
-                Date Task_Date = df3.parse(Job_time[count]);
-                String Print_task_Date = df3.format(Task_Date);
+                //String Sys_Date = df3.format(DATE);
+                Date Job_Date = df3.parse(Job_time[count]);
+                //String Print_task_Date = df3.format(Task_Date);
                 //System.out.println("This is for JOB ID : " + ID_Job[count]);
-                //System.out.println("Date now: " + Sys_Date);
-                //System.out.println("Task date: " + Print_task_Date);
+                //System.out.println("Date now: " + DATE);
+                //System.out.println("Task date: " + Job_Date);
 
-                if (DATE.compareTo(Task_Date) > 0) {
-                    //System.out.println(Sys_Date + " is after " + Print_task_Date);
+                if (DATE.compareTo(Job_Date) > 0) {
+                    System.out.println(DATE + " is after " + Job_Date);
                     //System.out.println("UPDATE `gamification`.`job` SET `Status`='end' WHERE `job`.`ID_Job` = '" + ID_Job[count] + "'");
                     preparedStatement = localconnection_thread.prepareStatement("UPDATE `gamification`.`job` SET `Status`='end', `Finished`='yes' WHERE `job`.`ID_Job` = '" + ID_Job[count] + "'");
                     preparedStatement.executeUpdate();
                     duetime = "no";
                     //late
                     postJob("List_Job/"+ID_Job[count]);
-                } else if (DATE.compareTo(Task_Date) < 0) {
+                } else if (DATE.compareTo(Job_Date) < 0) {
                     //System.out.println(Sys_Date + " is before " + Print_task_Date);
                     //System.out.println("UPDATE `gamification`.`job` SET `Status`='on' WHERE `job`.`ID_Job` = '" + ID_Job[count] + "'");
                     preparedStatement = localconnection_thread.prepareStatement("UPDATE `gamification`.`job` SET `Status`='on' WHERE `job`.`ID_Job` = '" + ID_Job[count] + "'");
                     preparedStatement.executeUpdate();
                     duetime = "yes";
-                } else if (DATE.compareTo(Task_Date) == 0) {
+                } else if (DATE.compareTo(Job_Date) == 0) {
                     //System.out.println(Sys_Date + " is the same " + Print_task_Date);
                     duetime = "no";
                 }
@@ -442,12 +441,14 @@ public class DB_MANAGEMENT implements Runnable {
                 case "task":
                     dataToSend2.put("body", task_job + " time remaining : " + remaining);
                     dataToSend2.put("title", "TASK REMINDER");
+                    dataToSend2.put("sound", "default");
                     dataToSend.put("notification", dataToSend2);
                     dataToSend.put("to", "/topics/" + user);
                     break;
                 case "job":
                     dataToSend2.put("body", task_job + " time remaining : " + remaining);
                     dataToSend2.put("title", "JOB REMINDER");
+                    dataToSend2.put("sound", "default");
                     dataToSend.put("notification", dataToSend2);
                     dataToSend.put("to", "/topics/" + user);
                     break;

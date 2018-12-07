@@ -19,6 +19,7 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.HttpURLConnection;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.security.MessageDigest;
@@ -39,16 +40,12 @@ import org.json.simple.JSONObject;
 
 public class Thread_Server implements Runnable {
 
-    File fileloc;
-    String folderGroup;
-    String memberGroup;
     BufferedReader bufferedReader;
     PrintStream printStream;
-    DataInputStream dataInputStream;
-    FileOutputStream fileOutputStream;
     Socket localsocket_thread;
     Connection localconnection_thread;
     Statement statement;
+    InputStreamReader ISR;
     PreparedStatement preparedStatement;
     ResultSet res;
     DateFormat df;
@@ -56,30 +53,15 @@ public class Thread_Server implements Runnable {
     Firestore db;
     int i;
 
-    public Thread_Server(Socket socket, Firestore db) {
-        try {
-            this.db = db;
-            localsocket_thread = socket;
-            bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            printStream = new PrintStream(socket.getOutputStream());
-            dataInputStream = new DataInputStream(socket.getInputStream());
-            df = new SimpleDateFormat("yyyy-MM-dd");
-            df2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            statement = localconnection_thread.createStatement();
-            i = 0;
-        } catch (IOException | SQLException ex) {
-            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
     public Thread_Server(Socket socket, Connection connection, Firestore db) {
         try {
             this.db = db;
             localsocket_thread = socket;
             localconnection_thread = connection;
-            bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            ISR =  new InputStreamReader(socket.getInputStream());
+            bufferedReader = new BufferedReader(ISR);
             printStream = new PrintStream(socket.getOutputStream());
-            dataInputStream = new DataInputStream(socket.getInputStream());
+            //dataInputStream = new DataInputStream(socket.getInputStream());
             df = new SimpleDateFormat("yyyy-MM-dd");
             df2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             statement = localconnection_thread.createStatement();
@@ -92,9 +74,14 @@ public class Thread_Server implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("Creating Thread");
             String fromClient = bufferedReader.readLine();
-            System.out.println("Request From Client : " + fromClient);
+            if (fromClient.equals("ping")) {
+
+            } else {
+                System.out.println("Creating Thread");
+                System.out.println("Request From Client : " + fromClient);
+            }
+
             String temporary = fromClient;
             String[] data = fromClient.split("-");
 
@@ -223,8 +210,8 @@ public class Thread_Server implements Runnable {
                     FuncReqProve(data);
                     break;
                 case "ping":
-                    postFB("ping", "hai/from global", data, data);
-                    printStream.println();
+                    //postFB("ping", "hai/from global", data, data);
+                    printStream.println("alive");
                     break;
                 case "get_job_detail":
                     FuncJobdetail(data);
@@ -234,10 +221,24 @@ public class Thread_Server implements Runnable {
                     System.out.println("Unknown");
                     break;
             }
-            System.out.println("Closing Thread, closed ?: " + localsocket_thread.isClosed());
-            localsocket_thread.close();
-            System.out.println("Thread closed, closed ?: " + localsocket_thread.isClosed());
+            if (fromClient.equals("ping")) {
+                localsocket_thread.close();
+            } else {
+                bufferedReader.close();
+                ISR.close();
+                printStream.close();
+                localsocket_thread.close();;
+                localconnection_thread.close();
+                statement.close();                
+                System.out.println("Closing Thread, closed ?: " + localsocket_thread.isClosed());
+                localsocket_thread.close();
+                System.out.println("Thread closed, closed ?: " + localsocket_thread.isClosed());
+                System.out.println("End : "+java.time.LocalTime.now());
+            }
+
         } catch (IOException ex) {
+            Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -296,8 +297,8 @@ public class Thread_Server implements Runnable {
                 printStream.println("Login Success");
                 statement.close();
             } else {
-                System.out.println("Login Failed");
-                printStream.println("Login Failed");
+                System.out.println("Login failed");
+                printStream.println("Login failed");
                 statement.close();
             }
         } catch (SQLException | NoSuchAlgorithmException | UnsupportedEncodingException ex) {
@@ -1185,15 +1186,15 @@ public class Thread_Server implements Runnable {
             }
 
             //delete messagenya
-            System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + data[1] + "' ");
-            res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + data[1] + "' ");
+            System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + data[1] + "' AND ID_User ='"+data[2]+"' ");
+            res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + data[1] + "' AND ID_User ='"+data[2]+"' ");
             if (res.next()) {
                 NumberOfTask = res.getInt(1);
             }
 
             String[] ID_Task = new String[NumberOfTask];
-            System.out.println("SELECT ID_Task FROM task WHERE ID_Job ='" + data[1] + "' ");
-            res = statement.executeQuery("SELECT ID_Task FROM task WHERE ID_Job ='" + data[1] + "' ");
+            System.out.println("SELECT ID_Task FROM task WHERE ID_Job ='" + data[1] + "' AND ID_User ='"+data[2]+"' ");
+            res = statement.executeQuery("SELECT ID_Task FROM task WHERE ID_Job ='" + data[1] + "' AND ID_User ='"+data[2]+"' ");
             while (res.next()) {
                 ID_Task[i] = res.getString(1);
                 System.out.println("ID Task [" + i + "] : " + ID_Task[i]);
@@ -1701,15 +1702,15 @@ public class Thread_Server implements Runnable {
                 i++;
             }
 
-            System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_job + "' ");
-            res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_job + "' ");
+            System.out.println("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_job + "' AND ID_User = '" + data[1] + "' ");
+            res = statement.executeQuery("SELECT count(ID_Task) FROM task WHERE ID_Job ='" + ID_job + "' AND ID_User = '" + data[1] + "' ");
             if (res.next()) {
                 NumberOfTask = res.getInt(1);
             }
 
             String[] ID_Task = new String[NumberOfTask];
-            System.out.println("SELECT ID_Task FROM task WHERE ID_Job ='" + ID_job + "' ");
-            res = statement.executeQuery("SELECT ID_Task FROM task WHERE ID_Job ='" + ID_job + "' ");
+            System.out.println("SELECT ID_Task FROM task WHERE ID_Job ='" + ID_job + "' AND ID_User = '" + data[1] + "' ");
+            res = statement.executeQuery("SELECT ID_Task FROM task WHERE ID_Job ='" + ID_job + "' AND ID_User = '" + data[1] + "' ");
             while (res.next()) {
                 ID_Task[a] = res.getString(1);
                 System.out.println("ID Task [" + i + "] : " + ID_Task[a]);
@@ -1717,8 +1718,8 @@ public class Thread_Server implements Runnable {
             }
 
             //task ta null kan;
-            System.out.println("UPDATE `gamification`.`task` SET `ID_User` = NULL, `Approved` = 'no', `Completed` = 'no' WHERE `task`.`ID_User` = '" + data[1] + "'");
-            preparedStatement = localconnection_thread.prepareStatement("UPDATE `gamification`.`task` SET `ID_User` = NULL, `Approved` = 'no', `Completed` = 'no' WHERE `task`.`ID_User` = '" + data[1] + "'");
+            System.out.println("UPDATE `gamification`.`task` SET `ID_User` = NULL, `Approved` = 'no', `Completed` = 'no' WHERE `task`.`ID_User` = '" + data[1] + "' AND `task`.`ID_Job` ='" + ID_job + "'");
+            preparedStatement = localconnection_thread.prepareStatement("UPDATE `gamification`.`task` SET `ID_User` = NULL, `Approved` = 'no', `Completed` = 'no' WHERE `task`.`ID_User` = '" + data[1] + "' AND `task`.`ID_Job` ='" + ID_job + "'");
             try {
                 preparedStatement.executeUpdate();
                 System.out.println("Success abandoning task");
@@ -2921,6 +2922,12 @@ public class Thread_Server implements Runnable {
             case "apply_reject":
                 try {
                     message = data[3] + "-" + data[5] + "-" + data[6];
+                    System.out.println("SELECT recepient FROM message WHERE message = '" + message + "'  ");
+                    res = statement.executeQuery("SELECT recepient FROM message WHERE message = '" + message + "' ");
+                    if (res.next()) {
+                        owner = res.getString(1);
+                        System.out.println(owner);
+                    }
                     System.out.println("UPDATE `gamification`.`message` SET `confirmation` = 'rejected' WHERE `message`.`message` = '" + message + "';");
                     preparedStatement = localconnection_thread.prepareStatement("UPDATE `gamification`.`message` SET `confirmation` = 'rejected' WHERE `message`.`message` = '" + message + "';");
                 } catch (SQLException ex) {
@@ -2929,11 +2936,12 @@ public class Thread_Server implements Runnable {
                 try {
                     preparedStatement.executeUpdate();
                     System.out.println("success reply message");
-                    postApply("apply", "applyNo", "", "", "", "", "", data[7]);
+                    postApply("apply", "applyNo", owner, data[7], data[7], data[7], data[7], data[7]);
                     postData2(data[3], data[6], "Application Rejected");
                     printStream.println("success");
                 } catch (Exception e) {
                     System.out.println("failed reply");
+                    System.out.println(e);
                     printStream.println("failed reply");
                 }
                 break;
@@ -3206,7 +3214,7 @@ public class Thread_Server implements Runnable {
                 try {
                     preparedStatement.executeUpdate();
                     System.out.println("success reply message");
-                    postInvite("invite", "inviteNo", message, owner, owner, data[7]);
+                    postInvite("invite", "inviteNo", data[4], owner, owner, data[7]);
                     postData2(owner, data[4] + " reject " + data[6], "Invitation Rejected");
                     printStream.println("success");
 
@@ -3469,10 +3477,10 @@ public class Thread_Server implements Runnable {
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
         } finally {
             if (bufferedWriter != null) {
                 bufferedWriter.close();
+               
             }
         }
         System.out.println("result = " + result.toString());
@@ -3491,7 +3499,20 @@ public class Thread_Server implements Runnable {
                     System.out.println("Update time : " + result1.get().getUpdateTime());
                     break;
                 case "create_task":
-                    result1 = noteRef.set(new createTask(data[1], data[2], data[4], data[3], date[1], date[2], "none", "on"));
+                    switch (data[3]) {
+                        case "Dex":
+                            data[3] = "Creativity";
+                            break;
+                        case "Str":
+                            data[3] = "Strength";
+                            break;
+                        case "Int":
+                            data[3] = "Intelligence";
+                            break;
+                        default:
+                            break;
+                    }
+                    result1 = noteRef.set(new createTask(data[1], data[2], data[4], data[3], date[1], date[2], "none", "no"));
                     System.out.println("Update time : " + result1.get().getUpdateTime());
                     break;
                 case "message":
@@ -3567,22 +3588,21 @@ public class Thread_Server implements Runnable {
             DocumentReference noteRef2 = db.document("List_Job/" + ID_Job + "/List_Task/" + ID_Task);
             CollectionReference noteRef3 = db.collection("Message/" + recipient + "/" + "inbox/");
             ApiFuture<WriteResult> result2;
-            switch (type) {
-                case "apply":
-                    switch (type2) {
-                        case "applyYes":
-                            result2 = noteRef1.update("slotnow", QTY);
-                            System.out.println("Update time : " + result2.get().getUpdateTime());
-                            result2 = noteRef2.update("worker", ID_User);
-                            System.out.println("Update time : " + result2.get().getUpdateTime());
-                            result2 = noteRef3.document(Doc_ID).delete();
-                            System.out.println("Update time : " + result2.get().getUpdateTime());
-                            break;
-                        case "applyNo":
-                            result2 = noteRef3.document(Doc_ID).delete();
-                            System.out.println("Update time : " + result2.get().getUpdateTime());
-                            break;
-                    }
+
+            switch (type2) {
+                case "applyYes":
+                    System.out.println("this is Yes");
+                    result2 = noteRef1.update("slotnow", QTY);
+                    System.out.println("Update time : " + result2.get().getUpdateTime());
+                    result2 = noteRef2.update("worker", ID_User);
+                    System.out.println("Update time : " + result2.get().getUpdateTime());
+                    result2 = noteRef3.document(Doc_ID).delete();
+                    System.out.println("Update time : " + result2.get().getUpdateTime());
+                    break;
+                case "applyNo":
+                    System.out.println(Doc_ID);
+                    result2 = noteRef3.document(Doc_ID).delete();
+                    System.out.println("Update time : " + result2.get().getUpdateTime());
                     break;
             }
 
@@ -3730,7 +3750,7 @@ public class Thread_Server implements Runnable {
             System.out.println("Write to : " + "List_Job/" + ID_Job + "/List_Task/" + ID_Task);
             DocumentReference noteRef2 = db.document("List_Job/" + ID_Job + "/List_Task/" + ID_Task);
             ApiFuture<WriteResult> result2;
-            result2 = noteRef2.update("status", "on");
+            result2 = noteRef2.update("status", "no");
             System.out.println("Update time : " + result2.get().getUpdateTime());
             System.out.println("FB process done");
         } catch (InterruptedException | ExecutionException | NullPointerException ex) {
@@ -3755,7 +3775,7 @@ public class Thread_Server implements Runnable {
                     DocumentReference noteRef2 = db.document("List_Job/" + ID_Job + "/List_Task/" + task[i]);
                     result2 = noteRef2.update("worker", "none");
                     System.out.println("Update time : " + result2.get().getUpdateTime());
-                    result2 = noteRef2.update("status", "on");
+                    result2 = noteRef2.update("status", "no");
                     System.out.println("Update time : " + result2.get().getUpdateTime());
                 }
             }
@@ -3767,15 +3787,14 @@ public class Thread_Server implements Runnable {
 
     private void broadcastVote(String[] recipient, String owner, String ID_Job) {
         try {
-            
+
             //CollectionReference noteRef2 = db.collection("Message/" + recipient + "/" + "inbox/");
-            
             ApiFuture<WriteResult> result2;
-            
+
             for (int i = 0; i < recipient.length; i++) {
                 CollectionReference noteRef1 = db.collection("Message/" + recipient[i] + "/" + "inbox/");
-                result2 = noteRef1.document().set(new inbox("System", "Time to vote " +recipient[i] +"'s job : "+ID_Job, "send", "vote", recipient[i] + "-vote-" + owner + "-" + ID_Job + "-"));
-                System.out.println("Update time : " + result2.get().getUpdateTime());                
+                result2 = noteRef1.document().set(new inbox("System", "Time to vote " + recipient[i] + "'s job : " + ID_Job, "send", "vote", recipient[i] + "-vote-" + owner + "-" + ID_Job + "-"));
+                System.out.println("Update time : " + result2.get().getUpdateTime());
             }
         } catch (InterruptedException | ExecutionException ex) {
             Logger.getLogger(Thread_Server.class.getName()).log(Level.SEVERE, null, ex);
